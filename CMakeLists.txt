@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.25)
+Include(FetchContent)
+
+project(REORDER CXX)
+
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED On)
+set(CMAKE_CXX_EXTENSIONS Off)
+set(CMAKE_BUILD_PARALLEL_LEVEL 8)
+
+# Add warnings
+add_compile_options(-Wall -Wextra -Wno-noexcept-type -Wno-implicit-fallthrough -Wno-unused-function)
+# Always optimize as much as we can
+# Instead of relying on -march=native (which breaks when building with nix) we
+# define the flags we need here
+add_compile_options(-O3 -g -march=native) #-mavx2 -mfma)
+
+find_package(OpenMP)
+if (OpenMP_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
+find_package(icecream-cpp)
+
+include_directories("include")
+include_directories("include/external/icecream-cpp")
+
+add_executable(reorder test/reorder_test.cpp)
+target_link_libraries(reorder PRIVATE icecream-cpp::icecream-cpp)
+
+###############################################################################
+# Python Bindings
+# 
+# This cmake code is adapted from
+# - https://nanobind.readthedocs.io/en/latest/building.html
+# - https://nanobind.readthedocs.io/en/latest/packaging.html
+
+# find_package(Python 3.12
+#   REQUIRED COMPONENTS Interpreter Development.Module
+#   OPTIONAL_COMPONENTS Development.SABIModule)
+
+# # Detect the installed nanobind package and import it into CMake
+# execute_process(
+#   COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+#   OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
+# find_package(nanobind CONFIG REQUIRED)
+
+# nanobind_add_module(_panna_impl NOMINSIZE NB_STATIC python/wrapper.cpp)
+# target_link_libraries(_panna_impl PRIVATE)
+
+# install(TARGETS _panna_impl LIBRARY DESTINATION panna)
