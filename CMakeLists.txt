@@ -40,17 +40,17 @@ target_link_libraries(reorder PRIVATE icecream-cpp::icecream-cpp)
 # - https://nanobind.readthedocs.io/en/latest/building.html
 # - https://nanobind.readthedocs.io/en/latest/packaging.html
 
-# find_package(Python 3.12
-#   REQUIRED COMPONENTS Interpreter Development.Module
-#   OPTIONAL_COMPONENTS Development.SABIModule)
+find_package(Python 3.14
+  REQUIRED COMPONENTS Interpreter Development.Module
+  OPTIONAL_COMPONENTS Development.SABIModule)
 
-# # Detect the installed nanobind package and import it into CMake
-# execute_process(
-#   COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
-#   OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
-# find_package(nanobind CONFIG REQUIRED)
+# Detect the installed nanobind package and import it into CMake
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
+find_package(nanobind CONFIG REQUIRED)
 
-# nanobind_add_module(_panna_impl NOMINSIZE NB_STATIC python/wrapper.cpp)
-# target_link_libraries(_panna_impl PRIVATE)
+nanobind_add_module(_reorder_impl NOMINSIZE NB_STATIC python/wrapper.cpp)
+target_link_libraries(_reorder_impl PRIVATE)
 
-# install(TARGETS _panna_impl LIBRARY DESTINATION panna)
+install(TARGETS _reorder_impl LIBRARY DESTINATION reorder)
