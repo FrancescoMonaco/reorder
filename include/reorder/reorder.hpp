@@ -15,6 +15,7 @@
 
 #include <icecream.hpp>
 #include "omp.h"
+#include "reorder/matrices.hpp"
 #include "reorder/expect.hpp"
 
 
@@ -22,8 +23,31 @@ namespace reorder {
 
     // Apply the masking tothe input matrix. To build Ahat each row v of A is divided into windows of size W
     // Each masked row vhat has a 1 for every non-zero window in v.
-    void mask( size_t W) {
-        (void)W;
+    void mask(CSR<size_t>& A, size_t W, CSR<size_t>& Ahat) {
+        Ahat.rows = A.rows;
+        Ahat.cols = (A.cols + W - 1) / W; // number
+        Ahat.nzcount = new size_t[Ahat.rows];
+        Ahat.ja = new size_t*[Ahat.rows];
+        Ahat.ma = new size_t*[Ahat.rows];
+        #pragma omp parallel for
+        for (size_t i = 0; i < A.rows; ++i) {
+            std::vector<size_t> window_indices;
+            for (size_t j = 0; j < A.nzcount[i]; ++j) {
+                size_t col = A.ja[i][j];
+                size_t window_index = col / W;
+                if (std::find(window_indices.begin(), window_indices.end(), window_index) == window_indices.end()) {
+                    window_indices.push_back(window_index);
+                    Ahat.nzcount[i]++;
+                }
+            }
+            Ahat.ja[i] = new size_t[Ahat.nzcount[i]];
+            Ahat.ma[i] = new size_t[Ahat.nzcount[i]];
+            for (size_t k = 0; k < window_indices.size(); ++k) {
+                Ahat.ja[i][k] = window_indices[k];
+                Ahat.ma[i][k] = 1;
+            }
+        }
+
     }
 
     // Cluster the masked matrix Ahat into K clusters. Each cluster is a set of rows of Ahat that are similar to each other.
