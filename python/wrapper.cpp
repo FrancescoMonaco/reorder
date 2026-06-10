@@ -6,6 +6,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include "reorder/reorder.hpp"
+#include "club/reorder.hpp"
 
 namespace nb = nanobind;
