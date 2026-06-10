@@ -34,6 +34,7 @@ include_directories("include/external/icecream-cpp")
 add_executable(reorder test/reorder_test.cpp)
 target_link_libraries(reorder PRIVATE icecream-cpp::icecream-cpp)
 
+
 ###############################################################################
 # Python Bindings
 # 
@@ -55,3 +56,32 @@ nanobind_add_module(_reorder_impl NOMINSIZE NB_STATIC python/wrapper.cpp)
 target_link_libraries(_reorder_impl PRIVATE)
 
 install(TARGETS _reorder_impl LIBRARY DESTINATION reorder)
+
+###############################################################################
+# Clang-Format Integration
+###############################################################################
+find_program(CLANG_FORMAT_BIN NAMES clang-format)
+
+if(CLANG_FORMAT_BIN)
+    # Gather all C++ source and header files (excluding external libraries)
+    file(GLOB_RECURSE SRC_FILES 
+        "include/club/*.hpp"
+        "python/*.cpp"
+        "test/*.cpp"
+    )
+
+    # Create a custom target that runs clang-format on the files
+    add_custom_target(
+        format
+        COMMAND ${CLANG_FORMAT_BIN} -i ${SRC_FILES}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running clang-format on source files..."
+    )
+
+    # Make build targets depend on the format target 
+    # so it runs BEFORE they compile
+    add_dependencies(reorder format)
+    add_dependencies(_reorder_impl format)
+else()
+    message(WARNING "clang-format not found. Auto-formatting is disabled.")
+endif()
