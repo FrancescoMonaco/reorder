@@ -20,6 +20,7 @@
 #include "club/expect.hpp"
 #include "club/matrices.hpp"
 #include "club/metrics.hpp"
+#include "club/simd.hpp"
 #include "omp.h"
 
 namespace club {
@@ -98,22 +99,17 @@ namespace club {
 
         // BSR structural masking logic goes here.
     }
-
-    // Cluster the masked matrix Ahat into K clusters. Each cluster is a set of rows of Ahat that
-    // are similar to each other. Then generate the permutation P that reorders the rows of Ahat
-    // according to the clusters.
-    void cluster( CSR<size_t, size_t>& Ahat, size_t K, std::vector<size_t>& P, float tau = 0.5 ) {
+    void
+    cluster_jaccard( CSR<size_t, size_t>& Ahat, size_t K,  std::vector<size_t>& P, float tau ) {
         const size_t n = Ahat.rows;
         P.resize( n );
         std::iota( P.begin(), P.end(), 0 );
         if ( n == 0 || K == 0 )
             return;
-        K = std::min( K, n ); // can't have more clusters than rows
+        K = std::min( K, n );
 
-        //  Jaccard distance between two Ahat rows
-        // Rows are sorted column-index lists, so intersection is a single merge pass.
-        // |J(a,b)| = 1 - |a ∩ b| / |a ∪ b|,  where |a ∪ b| = |a| + |b| - |a ∩ b|
-        auto jaccard_dist = [&]( size_t ri, size_t rj ) -> double {
+        // Merge-join Jaccard on sorted row segments — O(|ri| + |rj|)
+        auto jaccard_dist = [&]( size_t ri, size_t rj ) -> float {
             size_t s1 = Ahat.row_ptr[ri], e1 = Ahat.row_ptr[ri + 1];
             size_t s2 = Ahat.row_ptr[rj], e2 = Ahat.row_ptr[rj + 1];
             size_t ni = e1 - s1, nj = e2 - s2;
@@ -121,7 +117,6 @@ namespace club {
                 return 0.0;
             if ( ni == 0 || nj == 0 )
                 return 1.0;
-
             size_t isect = 0, pi = s1, pj = s2;
             while ( pi < e1 && pj < e2 ) {
                 if ( Ahat.col_ind[pi] == Ahat.col_ind[pj] ) {
@@ -134,67 +129,46 @@ namespace club {
                     ++pj;
                 }
             }
-            return 1.0 - static_cast<double>( isect ) / ( ni + nj - isect );
+            return 1.0 - static_cast<float>( isect ) / ( ni + nj - isect );
         };
 
-        // ** Phase 1: Radix-sort-like pre-ordering
-        // Build an inverted index (column → rows) then sweep left to right.
-        //
-        // Pure radix sort on the first column has positional bias: column 0 would
-        // dominate centroid selection.  Sweeping all column values left-to-right
-        // distributes rows across the full column space at a cost of O(Ahat.cols),
-        // so centroids picked from this ordering naturally cover different regions.
-        //
-        //   col 0: [r2, r7]   col 1: [r0, r5]   col 3: [r1]  ...
-        //   unclustered = [r2, r7, r0, r5, r1, ...]   ← locality-aware seed order
+        // Rows in natural matrix order — no pre-sorting
+        std::vector<size_t> unclustered( n );
+        std::iota( unclustered.begin(), unclustered.end(), 0 );
 
-        std::vector<std::vector<size_t>> col_buckets( Ahat.cols );
-        for ( size_t i = 0; i < n; ++i )
-            if ( Ahat.nzcount[i] > 0 )
-                col_buckets[Ahat.col_ind[Ahat.row_ptr[i]]].push_back( i );
-
-        std::vector<size_t> unclustered;
-        unclustered.reserve( n );
-        for ( size_t j = 0; j < Ahat.cols; ++j )
-            for ( size_t r : col_buckets[j] )
-                unclustered.push_back( r );
-        for ( size_t i = 0; i < n; ++i ) // empty rows contribute nothing → append last
-            if ( Ahat.nzcount[i] == 0 )
-                unclustered.push_back( i );
-
-        // ** Phase 2: Iterative Jaccard clustering
+        std::mt19937 rng{ std::random_device{}() };
         std::vector<std::vector<size_t>> result_clusters;
 
         while ( unclustered.size() >= K ) {
-            // Evenly-spaced centroid selection inherits the column-space spread
-            // from Phase 1: centroid k covers roughly the k-th column region.
-            const size_t step = unclustered.size() / K;
+            // Uniform random sample of K centroids without replacement.
+            // std::sample runs in O(unclustered.size()) — no full copy needed.
             std::vector<size_t> centroids( K );
-            for ( size_t k = 0; k < K; ++k )
-                centroids[k] = unclustered[k * step];
+            std::sample( unclustered.begin(), unclustered.end(), centroids.begin(), K, rng );
 
-            // Parallel assignment: each slot is written by exactly one thread.
-            // K is the sentinel meaning "no cluster assigned" (distance > tau).
+            // Parallel phase: each row independently finds its nearest centroid.
+            // Writes go to disjoint per-index slots — no synchronisation needed.
+            // Sentinel K means "distance > tau, leave for next iteration".
             std::vector<size_t> assignment( unclustered.size(), K );
 
-#pragma omp parallel for schedule( dynamic )
-            for ( size_t idx = 0; idx < unclustered.size(); ++idx ) {
-                double best = std::numeric_limits<double>::max();
+#pragma omp parallel for schedule(dynamic)
+            for (size_t idx = 0; idx < unclustered.size(); ++idx) {
+                float best = std::numeric_limits<float>::max();
                 size_t best_k = K;
-                for ( size_t k = 0; k < K; ++k ) {
-                    double d = jaccard_dist( unclustered[idx], centroids[k] );
-                    if ( d < best ) {
-                        best = d;
-                        best_k = k;
-                    }
+                for (size_t k = 0; k < K; ++k) {
+            #ifdef __AVX512F__
+                    float d = simd::jaccard(Ahat, unclustered[idx], centroids[k]);
+            #else
+                    float d = jaccard_dist(unclustered[idx], centroids[k]);
+            #endif
+                    if (d < best) { best = d; best_k = k; }
                 }
-                assignment[idx] = ( best <= tau ) ? best_k : K;
+                if (best <= tau) assignment[idx] = best_k;
             }
-
-            // Sequential scatter: one pass over assignment[] preserves the
-            // radix-sort ordering within each cluster and in the leftover set.
+            // Sequential scatter: one pass preserves natural row ordering
+            // within each cluster and within the leftover set.
             std::vector<std::vector<size_t>> new_clusters( K );
             std::vector<size_t> leftover;
+            leftover.reserve( unclustered.size() );
 
             for ( size_t idx = 0; idx < unclustered.size(); ++idx ) {
                 if ( assignment[idx] < K )
@@ -210,17 +184,61 @@ namespace club {
             unclustered = std::move( leftover );
         }
 
-        // Fewer than K rows left become their own cluster
+        // Fewer than K rows remain — each becomes a singleton cluster
         for ( size_t row : unclustered )
             result_clusters.push_back( { row } );
 
-        // ** Phase 3: Flatten clusters → permutation
-        size_t idx = 0;
+        // Flatten result_clusters into the output permutation
+        size_t pos = 0;
         for ( const auto& c : result_clusters )
             for ( size_t row : c )
-                P[idx++] = row;
+                P[pos++] = row;
     }
+    // Cluster the masked matrix Ahat into K clusters. Each cluster is a set of rows of Ahat that
+    // are similar to each other. Then generate the permutation P that reorders the rows of Ahat
+    // according to the clusters.
+    void cluster( CSR<size_t, size_t>& Ahat, size_t K, std::vector<size_t>& P, float tau = 0.5 ) {
+        const size_t n = Ahat.rows;
+        P.resize( n );
+        std::iota( P.begin(), P.end(), 0 );
+        if ( n == 0 || K == 0 )
+            return;
 
+        std::vector<std::vector<size_t>> col_buckets( Ahat.cols );
+        
+#ifdef __AVX512F__
+        const size_t empty_sentinel = Ahat.cols;
+        size_t i = 0;
+        for (; i + 8 <= n; i += 8) {
+            alignas(64) size_t first_cols[8];
+            simd::fetch_first_cols(Ahat, i, first_cols, empty_sentinel);
+            for (int k = 0; k < 8; ++k) {
+                if (first_cols[k] != empty_sentinel) {
+                    col_buckets[first_cols[k]].push_back(i + k);
+                }
+            }
+        }
+        for (; i < n; ++i) {
+            if (Ahat.nzcount[i] > 0)
+                col_buckets[Ahat.col_ind[Ahat.row_ptr[i]]].push_back(i);
+        }
+#else
+        for ( size_t i = 0; i < n; ++i )
+            if ( Ahat.nzcount[i] > 0 )
+                col_buckets[Ahat.col_ind[Ahat.row_ptr[i]]].push_back( i );
+#endif
+
+        std::vector<size_t> unclustered;
+        unclustered.reserve( n );
+        for ( size_t j = 0; j < Ahat.cols; ++j )
+            for ( size_t r : col_buckets[j] )
+                unclustered.push_back( r );
+        for ( size_t i = 0; i < n; ++i )
+            if ( Ahat.nzcount[i] == 0 )
+                unclustered.push_back( i );
+
+        P = std::move( unclustered ); // ← radix-sorted order IS the permutation
+    }
     // Apply the permutation P to the input matrix A to obtain the reordered matrix A'.
     // Need to overload for CSR and BSR
     template <typename DataT, typename intT>
@@ -304,9 +322,11 @@ namespace club {
     // Apply the reordering to the input matrix A. The reordering is defined by the parameters W and
     // K.
     template <typename MatrixType>
-    void reorder( MatrixType& A, size_t W, size_t K, float tau = 0.5 ) {
+    void reorder( MatrixType& A, size_t W, size_t K, float tau = 0.9 ) {
         CSR<size_t, size_t> Ahat;
         std::vector<size_t> P;
+        size_t W_mes = 32;
+        LOG_INFO( "msg", "Starting reordering", "nonzero blocks", count_nonzero_blocks( A, W_mes, W_mes ) );
 
         mask( A, W, Ahat );
         LOG_INFO( "msg", "Masking completed", "Sketch size", Ahat.cols );
@@ -314,9 +334,8 @@ namespace club {
         LOG_INFO( "msg",
                   "Applying permutation to the original matrix",
                   "nonzero blocks",
-                  count_nonzero_blocks( A, W, 1 ) );
+                  count_nonzero_blocks( A, W_mes, W_mes ) );
         permute( A, P );
-        LOG_INFO(
-            "msg", "Permutation applyied", "nonzero blocks", count_nonzero_blocks( A, W, W ) );
+        LOG_INFO( "msg", "Permutation applied", "nonzero blocks", count_nonzero_blocks( A, W_mes, W_mes ) );
     }
 } // namespace club

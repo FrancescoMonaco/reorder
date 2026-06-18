@@ -71,3 +71,4 @@ Makefile*
 *out
 *.mtx
 *tar.gz
+*.gz
