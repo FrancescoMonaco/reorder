@@ -1,11 +1,11 @@
 """
 reorder_test.py — Python equivalent of test/reorder_test.cpp
 Uses pyNNDescent to build a k-NN graph on the masked (binary sketch)
-matrix and derives row permutations via BFS traversal on that graph.
+matrix and derives row permutations via greedy nearest-neighbor chain
+traversal on that graph.
 """
 
 import time
-from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -50,25 +50,25 @@ def mask(A: sp.csr_matrix, W: int) -> sp.csr_matrix:
 # count_nonzero_blocks(A, bw, bh)
 # Matches the C++ club::count_nonzero_blocks for CSR.
 # Counts distinct (block_row, block_col) pairs occupied by at least one nz.
+# Vectorised — no Python-level loop over individual nonzeros.
 # ---------------------------------------------------------------------------
 def count_nonzero_blocks(A: sp.csr_matrix, bw: int, bh: int) -> int:
-    occupied: set[tuple[int, int]] = set()
-    n_rows = A.shape[0]
-    for i in range(n_rows):
-        block_row = i // bh
-        for k in range(A.indptr[i], A.indptr[i + 1]):
-            block_col = int(A.indices[k]) // bw
-            occupied.add((block_row, block_col))
-    return len(occupied)
+    coo = A.tocoo()
+    block_rows = coo.row // bh
+    block_cols = coo.col // bw
+    # Pack into a single int64 for fast deduplication
+    keys = block_rows.astype(np.int64) * (int(np.ceil(A.shape[1] / bw)) + 1) + block_cols
+    return int(np.unique(keys).shape[0])
 
 
 # ---------------------------------------------------------------------------
 # cluster_nndescent(Ahat, n_neighbors) → permutation P
 #
 # 1. Build the k-NN graph of Ahat rows using pyNNDescent (Jaccard metric).
-# 2. Derive the row permutation via BFS on the k-NN adjacency.
-#    No separate community-detection algorithm — just a graph walk
-#    that naturally groups similar rows together.
+# 2. Derive the row permutation via greedy nearest-neighbor chain:
+#    from the current row, always step to the closest unvisited neighbor.
+#    This keeps rows with similar sparsity patterns adjacent without
+#    running any separate community-detection algorithm.
 # ---------------------------------------------------------------------------
 def cluster_nndescent(Ahat: sp.csr_matrix, n_neighbors: int = 15) -> np.ndarray:
     n = Ahat.shape[0]
@@ -81,28 +81,52 @@ def cluster_nndescent(Ahat: sp.csr_matrix, n_neighbors: int = 15) -> np.ndarray:
         return np.arange(n, dtype=np.intp)
 
     # Build the NN graph — sparse input, Jaccard metric
+    # nn_indices[i] and nn_distances[i] are sorted by distance (nearest first)
     nnd = NNDescent(Ahat, metric="jaccard", n_neighbors=k, verbose=False)
-    nn_indices, _ = nnd.neighbor_graph
+    nn_indices, nn_distances = nnd.neighbor_graph
 
-    # BFS traversal on the k-NN adjacency → permutation
+    # ------------------------------------------------------------------
+    # Greedy nearest-neighbor chain traversal
+    #
+    # From the current node, always jump to the nearest unvisited
+    # neighbour in its k-NN list.  When all k neighbours have been
+    # visited, advance a linear fallback pointer to find the next
+    # unvisited row and start a new chain segment.
+    #
+    # Amortised O(n·k) because the fallback pointer only moves forward.
+    # ------------------------------------------------------------------
     visited = np.zeros(n, dtype=np.bool_)
     perm = np.empty(n, dtype=np.intp)
     pos = 0
-    queue: deque[int] = deque()
+    fallback = 0  # linear scan pointer — only advances
 
-    for seed in range(n):
-        if visited[seed]:
-            continue
-        visited[seed] = True
-        queue.append(seed)
-        while queue:
-            node = queue.popleft()
-            perm[pos] = node
-            pos += 1
-            for nb in nn_indices[node]:
-                if nb >= 0 and not visited[nb]:
-                    visited[nb] = True
-                    queue.append(nb)
+    current = 0
+    visited[current] = True
+    perm[pos] = current
+    pos += 1
+
+    while pos < n:
+        # Try to step to the nearest unvisited neighbour
+        found = False
+        for j in range(k):
+            nb = nn_indices[current, j]
+            if nb >= 0 and not visited[nb]:
+                current = nb
+                visited[current] = True
+                perm[pos] = current
+                pos += 1
+                found = True
+                break
+
+        if not found:
+            # All k neighbours already visited — advance fallback pointer
+            while fallback < n and visited[fallback]:
+                fallback += 1
+            if fallback < n:
+                current = fallback
+                visited[current] = True
+                perm[pos] = current
+                pos += 1
 
     return perm
 
