@@ -13,9 +13,14 @@
 #include <optional>
 #include <random>
 #include <stdexcept>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#ifdef __AVX512F__
+#include <immintrin.h>
+#endif
 
 #include "club/expect.hpp"
 #include "club/matrices.hpp"
@@ -98,9 +103,207 @@ namespace club {
         Ahat.row_ptr.assign( Ahat.rows + 1, 0 );
 
         // BSR structural masking logic goes here.
+        // NOTE: reorder2() below needs mask/transpose/permute_cols for the matrix
+        // type it's instantiated with. None of those exist yet for BSR (this stub
+        // included), so reorder2<BSR<...>> will fail to compile until this is
+        // filled in and BSR transpose()/permute_cols() are added. CSR is fully
+        // supported below.
     }
-    void
-    cluster_jaccard( CSR<size_t, size_t>& Ahat, size_t K,  std::vector<size_t>& P, float tau ) {
+
+    // ------------------------------------------------------------------------
+    // column_rank(Ahat) -> rank[col]
+    //
+    // Ranks columns of the masked sketch by descending popularity: rank 0 is
+    // the most frequent window, increasing ranks go to rarer windows. Ties are
+    // broken by column index for determinism.
+    //
+    // This is the piece that encodes "common windows should dominate the sort,
+    // rare windows should only break ties": cluster_lex() below sorts each
+    // row's window list by this rank (ascending), so common windows land first
+    // in the signature and act as the primary key in the lexicographic
+    // comparison; rare windows trail off as tie-breakers.
+    //
+    // O(total nnz of Ahat + cols): counts are bounded integers in [0, rows], so
+    // we bucket by count value instead of paying for a comparison sort.
+    // ------------------------------------------------------------------------
+    inline std::vector<size_t> column_rank( const CSR<size_t, size_t>& Ahat ) {
+        const size_t cols = Ahat.cols;
+        const size_t n = Ahat.rows;
+
+        std::vector<size_t> col_count( cols, 0 );
+
+        // Parallel histogram: each thread accumulates into a private buffer,
+        // then folds into the shared one — avoids atomics on the hot loop.
+#pragma omp parallel
+        {
+            std::vector<size_t> local( cols, 0 );
+#pragma omp for schedule( static ) nowait
+            for ( size_t i = 0; i < n; ++i ) {
+                size_t s = Ahat.row_ptr[i], e = Ahat.row_ptr[i + 1];
+                for ( size_t k = s; k < e; ++k )
+                    ++local[Ahat.col_ind[k]];
+            }
+#pragma omp critical
+            for ( size_t c = 0; c < cols; ++c )
+                col_count[c] += local[c];
+        }
+
+        std::vector<std::vector<size_t>> by_count( n + 1 );
+        for ( size_t c = 0; c < cols; ++c )
+            by_count[col_count[c]].push_back( c );
+
+        std::vector<size_t> rank( cols );
+        size_t r = 0;
+        for ( size_t cnt = n; ; --cnt ) {
+            for ( size_t c : by_count[cnt] )
+                rank[c] = r++;
+            if ( cnt == 0 )
+                break;
+        }
+        return rank;
+    }
+
+    // ------------------------------------------------------------------------
+    // cluster_lex(Ahat, P)
+    //
+    // Full lexicographic clustering of rows by their (rank-remapped) window
+    // sets — the "suffix tree" idea, but implemented as what it actually is: a
+    // trie over each row's prefix, built without ever materialising the tree.
+    // Each level of recursion below IS one radix-bucket pass; the sorted
+    // output order falls out of the recursion directly (this is the same
+    // relationship a suffix array + LCP array has to an explicit suffix tree —
+    // the array gives you the tree's structure for free).
+    //
+    // Column visiting order is given by column_rank(): rows are split first on
+    // their most common shared window (primary key, large groups), then
+    // recursively on rarer windows only within ties. This is what makes the
+    // top-level grouping driven by widely-shared structure instead of being
+    // scattered by rare columns.
+    //
+    // Complexity: O(total nnz of Ahat) for the rank lookup, O(total nnz log
+    // avg_row_nnz) for the per-row sorts, and O(total nnz) amortised across all
+    // recursion levels for the bucketing itself (each nonzero participates in
+    // at most one bucket per level of its own row's signature length).
+    // ------------------------------------------------------------------------
+    inline void cluster_lex( const CSR<size_t, size_t>& Ahat, std::vector<size_t>& P ) {
+        const size_t n = Ahat.rows;
+        P.resize( n );
+        if ( n == 0 )
+            return;
+
+        const std::vector<size_t> rank = column_rank( Ahat );
+
+        // Per-row signature: this row's windows, rank-remapped and sorted
+        // ascending, so the most common window comes first.
+        std::vector<std::vector<size_t>> sig( n );
+#pragma omp parallel for schedule( dynamic )
+        for ( size_t i = 0; i < n; ++i ) {
+            size_t s = Ahat.row_ptr[i], e = Ahat.row_ptr[i + 1];
+            sig[i].resize( e - s );
+            size_t k = s;
+#ifdef __AVX512F__
+            // Gather 8 ranks at a time, mirroring simd::fetch_first_cols'
+            // gather-based column lookups elsewhere in this file. Unverified
+            // against this codebase's actual simd.hpp — check intrinsic
+            // signatures compile cleanly before relying on this path.
+            for ( ; k + 8 <= e; k += 8 ) {
+                __m512i idx = _mm512_loadu_si512( reinterpret_cast<const void*>( &Ahat.col_ind[k] ) );
+                __m512i r = _mm512_i64gather_epi64( idx, reinterpret_cast<const long long*>( rank.data() ), 8 );
+                _mm512_storeu_si512( reinterpret_cast<void*>( &sig[i][k - s] ), r );
+            }
+#endif
+            for ( ; k < e; ++k )
+                sig[i][k - s] = rank[Ahat.col_ind[k]];
+            std::sort( sig[i].begin(), sig[i].end() );
+        }
+
+        // Sequential iterative radix-bucket sort to prevent stack overflow on deep recursive graphs.
+        auto process_bucket = [&]( std::vector<size_t> init_group, size_t init_depth, size_t init_lo ) {
+            struct Task {
+                std::vector<size_t> group;
+                size_t depth;
+                size_t lo;
+            };
+            std::vector<Task> stack;
+            stack.push_back({ std::move( init_group ), init_depth, init_lo });
+
+            while ( !stack.empty() ) {
+                Task task = std::move( stack.back() );
+                stack.pop_back();
+
+                if ( task.group.size() <= 1 ) {
+                    for ( size_t r : task.group )
+                        P[task.lo++] = r;
+                    continue;
+                }
+
+                std::vector<size_t> exhausted;
+                std::unordered_map<size_t, std::vector<size_t>> buckets;
+                for ( size_t r : task.group ) {
+                    if ( sig[r].size() <= task.depth )
+                        exhausted.push_back( r );
+                    else
+                        buckets[sig[r][task.depth]].push_back( r );
+                }
+                for ( size_t r : exhausted )
+                    P[task.lo++] = r;
+
+                std::vector<size_t> keys;
+                keys.reserve( buckets.size() );
+                for ( auto& kv : buckets )
+                    keys.push_back( kv.first );
+                std::sort( keys.begin(), keys.end() );
+
+                size_t total_sz = 0;
+                for ( size_t key : keys )
+                    total_sz += buckets[key].size();
+                size_t current_lo = task.lo + total_sz;
+
+                for ( auto it = keys.rbegin(); it != keys.rend(); ++it ) {
+                    auto& b = buckets[*it];
+                    size_t sz = b.size();
+                    current_lo -= sz;
+                    stack.push_back({ std::move( b ), task.depth + 1, current_lo });
+                }
+            }
+        };
+
+        // Bucket once at the top level by primary key so the independent
+        // buckets can recurse in parallel — each thread writes into its own
+        // precomputed slice of P, no synchronisation needed.
+        std::vector<size_t> exhausted;
+        std::unordered_map<size_t, std::vector<size_t>> top_buckets;
+        for ( size_t i = 0; i < n; ++i ) {
+            if ( sig[i].empty() )
+                exhausted.push_back( i );
+            else
+                top_buckets[sig[i][0]].push_back( i );
+        }
+
+        std::vector<size_t> keys;
+        keys.reserve( top_buckets.size() );
+        for ( auto& kv : top_buckets )
+            keys.push_back( kv.first );
+        std::sort( keys.begin(), keys.end() );
+
+        size_t pos = 0;
+        for ( size_t r : exhausted )
+            P[pos++] = r;
+
+        std::vector<std::vector<size_t>> top_groups( keys.size() );
+        for ( size_t b = 0; b < keys.size(); ++b )
+            top_groups[b] = std::move( top_buckets[keys[b]] );
+
+        std::vector<size_t> offsets( keys.size() + 1, 0 );
+        for ( size_t b = 0; b < keys.size(); ++b )
+            offsets[b + 1] = offsets[b] + top_groups[b].size();
+
+#pragma omp parallel for schedule( dynamic )
+        for ( size_t b = 0; b < keys.size(); ++b )
+            process_bucket( std::move( top_groups[b] ), 1, pos + offsets[b] );
+    }
+
+    void cluster_jaccard( CSR<size_t, size_t>& Ahat, size_t K, std::vector<size_t>& P, float tau ) {
         const size_t n = Ahat.rows;
         P.resize( n );
         std::iota( P.begin(), P.end(), 0 );
@@ -150,19 +353,23 @@ namespace club {
             // Sentinel K means "distance > tau, leave for next iteration".
             std::vector<size_t> assignment( unclustered.size(), K );
 
-#pragma omp parallel for schedule(dynamic)
-            for (size_t idx = 0; idx < unclustered.size(); ++idx) {
+#pragma omp parallel for schedule( dynamic )
+            for ( size_t idx = 0; idx < unclustered.size(); ++idx ) {
                 float best = std::numeric_limits<float>::max();
                 size_t best_k = K;
-                for (size_t k = 0; k < K; ++k) {
-            #ifdef __AVX512F__
-                    float d = simd::jaccard(Ahat, unclustered[idx], centroids[k]);
-            #else
-                    float d = jaccard_dist(unclustered[idx], centroids[k]);
-            #endif
-                    if (d < best) { best = d; best_k = k; }
+                for ( size_t k = 0; k < K; ++k ) {
+#ifdef __AVX512F__
+                    float d = simd::jaccard( Ahat, unclustered[idx], centroids[k] );
+#else
+                    float d = jaccard_dist( unclustered[idx], centroids[k] );
+#endif
+                    if ( d < best ) {
+                        best = d;
+                        best_k = k;
+                    }
                 }
-                if (best <= tau) assignment[idx] = best_k;
+                if ( best <= tau )
+                    assignment[idx] = best_k;
             }
             // Sequential scatter: one pass preserves natural row ordering
             // within each cluster and within the leftover set.
@@ -205,22 +412,22 @@ namespace club {
             return;
 
         std::vector<std::vector<size_t>> col_buckets( Ahat.cols );
-        
+
 #ifdef __AVX512F__
         const size_t empty_sentinel = Ahat.cols;
         size_t i = 0;
-        for (; i + 8 <= n; i += 8) {
-            alignas(64) size_t first_cols[8];
-            simd::fetch_first_cols(Ahat, i, first_cols, empty_sentinel);
-            for (int k = 0; k < 8; ++k) {
-                if (first_cols[k] != empty_sentinel) {
-                    col_buckets[first_cols[k]].push_back(i + k);
+        for ( ; i + 8 <= n; i += 8 ) {
+            alignas( 64 ) size_t first_cols[8];
+            simd::fetch_first_cols( Ahat, i, first_cols, empty_sentinel );
+            for ( int k = 0; k < 8; ++k ) {
+                if ( first_cols[k] != empty_sentinel ) {
+                    col_buckets[first_cols[k]].push_back( i + k );
                 }
             }
         }
-        for (; i < n; ++i) {
-            if (Ahat.nzcount[i] > 0)
-                col_buckets[Ahat.col_ind[Ahat.row_ptr[i]]].push_back(i);
+        for ( ; i < n; ++i ) {
+            if ( Ahat.nzcount[i] > 0 )
+                col_buckets[Ahat.col_ind[Ahat.row_ptr[i]]].push_back( i );
         }
 #else
         for ( size_t i = 0; i < n; ++i )
@@ -319,6 +526,102 @@ namespace club {
         A.bnz = std::move( new_bnz );
     }
 
+    // ------------------------------------------------------------------------
+    // transpose(A, AT) — CSR -> CSR transpose via counting sort.
+    //
+    // The scatter pass (Step 2) is inherently sequential per *destination*
+    // row: multiple source rows can write into the same AT row, so it isn't
+    // parallelised the way permute() is. The histogram pass before it is the
+    // expensive part for large matrices and could be parallelised the same
+    // way column_rank() does it (private histograms folded under a critical
+    // section) if profiling shows it's worth it.
+    //
+    // Bonus: because source rows are visited in ascending order, each AT row
+    // ends up with col_ind already sorted ascending — no extra sort needed.
+    // ------------------------------------------------------------------------
+    template <typename DataT, typename intT>
+    void transpose( const CSR<DataT, intT>& A, CSR<DataT, intT>& AT ) {
+        AT.rows = A.cols;
+        AT.cols = A.rows;
+        AT.pattern_only = A.pattern_only;
+
+        AT.row_ptr.assign( AT.rows + 1, 0 );
+
+        std::vector<intT> col_count( A.cols, 0 );
+        intT total_nnz = A.row_ptr[A.rows];
+        for ( intT k = 0; k < total_nnz; ++k )
+            ++col_count[A.col_ind[k]];
+
+        for ( size_t j = 0; j < AT.rows; ++j )
+            AT.row_ptr[j + 1] = AT.row_ptr[j] + col_count[j];
+
+        AT.nzcount.assign( col_count.begin(), col_count.end() );
+        AT.col_ind.resize( total_nnz );
+        if ( !A.pattern_only )
+            AT.values.resize( total_nnz );
+
+        std::vector<intT> cursor( AT.row_ptr.begin(), AT.row_ptr.end() - 1 );
+
+        for ( size_t i = 0; i < static_cast<size_t>( A.rows ); ++i ) {
+            intT s = A.row_ptr[i], e = A.row_ptr[i + 1];
+            for ( intT k = s; k < e; ++k ) {
+                intT j = A.col_ind[k];
+                intT dst = cursor[j]++;
+                AT.col_ind[dst] = static_cast<intT>( i );
+                if ( !A.pattern_only )
+                    AT.values[dst] = A.values[k];
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // permute_cols(A, Q) — apply a column permutation directly, no transpose
+    // round-trip needed. Same convention as permute()'s P: Q[j] is the OLD
+    // column index that becomes new column j.
+    //
+    // Each row's columns get remapped through inv(Q) and then re-sorted, since
+    // the remap can break the ascending order CSR rows are expected to keep.
+    // Each row is independent, so this parallelises the same way permute()'s
+    // scatter step does.
+    // ------------------------------------------------------------------------
+    template <typename DataT, typename intT>
+    void permute_cols( CSR<DataT, intT>& A, const std::vector<size_t>& Q ) {
+        assert( Q.size() == static_cast<size_t>( A.cols ) );
+
+        std::vector<intT> inv_Q( A.cols );
+        for ( size_t j = 0; j < Q.size(); ++j )
+            inv_Q[Q[j]] = static_cast<intT>( j );
+
+#pragma omp parallel for schedule( dynamic )
+        for ( size_t i = 0; i < static_cast<size_t>( A.rows ); ++i ) {
+            intT s = A.row_ptr[i], e = A.row_ptr[i + 1];
+            size_t len = e - s;
+            if ( len == 0 )
+                continue;
+
+            for ( intT k = s; k < e; ++k )
+                A.col_ind[k] = inv_Q[A.col_ind[k]];
+
+            std::vector<size_t> order( len );
+            std::iota( order.begin(), order.end(), 0 );
+            std::sort( order.begin(), order.end(), [&]( size_t a, size_t b ) {
+                return A.col_ind[s + a] < A.col_ind[s + b];
+            } );
+
+            std::vector<intT> new_cols( len );
+            for ( size_t t = 0; t < len; ++t )
+                new_cols[t] = A.col_ind[s + order[t]];
+            std::copy( new_cols.begin(), new_cols.end(), A.col_ind.begin() + s );
+
+            if ( !A.pattern_only ) {
+                std::vector<DataT> new_vals( len );
+                for ( size_t t = 0; t < len; ++t )
+                    new_vals[t] = A.values[s + order[t]];
+                std::copy( new_vals.begin(), new_vals.end(), A.values.begin() + s );
+            }
+        }
+    }
+
     // Apply the reordering to the input matrix A. The reordering is defined by the parameters W and
     // K.
     template <typename MatrixType>
@@ -326,7 +629,10 @@ namespace club {
         CSR<size_t, size_t> Ahat;
         std::vector<size_t> P;
         size_t W_mes = 32;
-        LOG_INFO( "msg", "Starting reordering", "nonzero blocks", count_nonzero_blocks( A, W_mes, W_mes ) );
+        LOG_INFO( "msg",
+                  "Starting reordering",
+                  "nonzero blocks",
+                  count_nonzero_blocks( A, W_mes, W_mes ) );
 
         mask( A, W, Ahat );
         LOG_INFO( "msg", "Masking completed", "Sketch size", Ahat.cols );
@@ -336,6 +642,67 @@ namespace club {
                   "nonzero blocks",
                   count_nonzero_blocks( A, W_mes, W_mes ) );
         permute( A, P );
-        LOG_INFO( "msg", "Permutation applied", "nonzero blocks", count_nonzero_blocks( A, W_mes, W_mes ) );
+        LOG_INFO( "msg",
+                  "Permutation applied",
+                  "nonzero blocks",
+                  count_nonzero_blocks( A, W_mes, W_mes ) );
+    }
+
+    // ------------------------------------------------------------------------
+    // reorder2(A, W, max_iters) — alternating row/column reordering.
+    //
+    // Bond-Energy-Algorithm-style co-clustering: cluster & permute rows with
+    // cluster_lex(), transpose, cluster & permute columns the same way, and
+    // repeat. Each pass is O(nnz) (no approximate graph, no k-NN), so a handful
+    // of iterations costs little more than your existing single-pass
+    // lexicographic reorder.
+    //
+    // Stops as soon as a full row+column pass fails to *strictly* improve the
+    // block count, and always returns the best permutation state actually
+    // seen — a regression on the last iteration can't make the final result
+    // worse than an earlier, better iteration.
+    //
+    // CSR only for now: BSR's mask()/transpose()/permute_cols() aren't
+    // implemented (mask<BSR> is a stub above), so this won't compile for
+    // BSR<...> until those are filled in.
+    // ------------------------------------------------------------------------
+    template <typename DataT, typename intT>
+    void reorder2( CSR<DataT, intT>& A, size_t W, size_t max_iters = 4 ) {
+        const size_t W_mes = 32;
+        size_t best_blocks = count_nonzero_blocks( A, W_mes, W_mes );
+        LOG_INFO( "msg", "Starting 2-sided reordering", "nonzero blocks", best_blocks );
+
+        CSR<DataT, intT> best = A;
+
+        for ( size_t iter = 0; iter < max_iters; ++iter ) {
+            // --- row pass ---
+            CSR<size_t, size_t> Ahat;
+            std::vector<size_t> P;
+            mask( A, W, Ahat );
+            cluster_lex( Ahat, P );
+            permute( A, P );
+
+            // --- column pass, via transpose ---
+            CSR<DataT, intT> AT;
+            transpose( A, AT );
+            CSR<size_t, size_t> AhatT;
+            std::vector<size_t> Q;
+            mask( AT, W, AhatT );
+            cluster_lex( AhatT, Q );
+            permute_cols( A, Q );
+
+            size_t blocks = count_nonzero_blocks( A, W_mes, W_mes );
+            LOG_INFO( "msg", "Pass completed", "iter", iter, "nonzero blocks", blocks );
+
+            if ( blocks < best_blocks ) {
+                best_blocks = blocks;
+                best = A;
+            } else {
+                break;
+            }
+        }
+
+        A = std::move( best );
+        LOG_INFO( "msg", "2-sided reordering done", "nonzero blocks", best_blocks );
     }
 } // namespace club

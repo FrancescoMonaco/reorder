@@ -1,8 +1,8 @@
 """
 reorder_test.py — Python equivalent of test/reorder_test.cpp
 Uses pyNNDescent to build a k-NN graph on the masked (binary sketch)
-matrix and derives row permutations via greedy nearest-neighbor chain
-traversal on that graph.
+matrix, then applies Reverse Cuthill-McKee on the k-NN adjacency
+to produce a bandwidth-reducing row permutation.
 """
 
 import time
@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import scipy.io as sio
 import scipy.sparse as sp
+from scipy.sparse.csgraph import reverse_cuthill_mckee
 from pynndescent import NNDescent
 
 
@@ -65,10 +66,11 @@ def count_nonzero_blocks(A: sp.csr_matrix, bw: int, bh: int) -> int:
 # cluster_nndescent(Ahat, n_neighbors) → permutation P
 #
 # 1. Build the k-NN graph of Ahat rows using pyNNDescent (Jaccard metric).
-# 2. Derive the row permutation via greedy nearest-neighbor chain:
-#    from the current row, always step to the closest unvisited neighbor.
-#    This keeps rows with similar sparsity patterns adjacent without
-#    running any separate community-detection algorithm.
+# 2. Convert the k-NN index lists into a symmetric sparse adjacency matrix.
+# 3. Apply Reverse Cuthill-McKee (RCM) on that adjacency — a BFS variant
+#    purpose-built for bandwidth/profile reduction.  Starts from a
+#    peripheral node and visits neighbours in ascending-degree order.
+#    O(n + edges), no separate community-detection algorithm.
 # ---------------------------------------------------------------------------
 def cluster_nndescent(Ahat: sp.csr_matrix, n_neighbors: int = 15) -> np.ndarray:
     n = Ahat.shape[0]
@@ -81,53 +83,34 @@ def cluster_nndescent(Ahat: sp.csr_matrix, n_neighbors: int = 15) -> np.ndarray:
         return np.arange(n, dtype=np.intp)
 
     # Build the NN graph — sparse input, Jaccard metric
-    # nn_indices[i] and nn_distances[i] are sorted by distance (nearest first)
-    nnd = NNDescent(Ahat, metric="jaccard", n_neighbors=k, verbose=False)
-    nn_indices, nn_distances = nnd.neighbor_graph
+    nnd = NNDescent(Ahat, metric="hamming", n_neighbors=k, verbose=False)
+    nn_indices, _ = nnd.neighbor_graph
 
     # ------------------------------------------------------------------
-    # Greedy nearest-neighbor chain traversal
-    #
-    # From the current node, always jump to the nearest unvisited
-    # neighbour in its k-NN list.  When all k neighbours have been
-    # visited, advance a linear fallback pointer to find the next
-    # unvisited row and start a new chain segment.
-    #
-    # Amortised O(n·k) because the fallback pointer only moves forward.
+    # Build symmetric sparse adjacency from the k-NN index lists.
+    # Edge (i, j) exists if i is among j's k-NN OR j is among i's k-NN.
     # ------------------------------------------------------------------
-    visited = np.zeros(n, dtype=np.bool_)
-    perm = np.empty(n, dtype=np.intp)
-    pos = 0
-    fallback = 0  # linear scan pointer — only advances
+    src = np.repeat(np.arange(n, dtype=np.int32), k)
+    dst = nn_indices.ravel().astype(np.int32)
 
-    current = 0
-    visited[current] = True
-    perm[pos] = current
-    pos += 1
+    # Drop self-loops and any invalid sentinel indices
+    valid = (dst >= 0) & (dst < n) & (dst != src)
+    src, dst = src[valid], dst[valid]
 
-    while pos < n:
-        # Try to step to the nearest unvisited neighbour
-        found = False
-        for j in range(k):
-            nb = nn_indices[current, j]
-            if nb >= 0 and not visited[nb]:
-                current = nb
-                visited[current] = True
-                perm[pos] = current
-                pos += 1
-                found = True
-                break
+    adj = sp.csr_matrix(
+        (np.ones(len(src), dtype=np.float32), (src, dst)),
+        shape=(n, n),
+    )
+    # Symmetrise: union of directed k-NN edges
+    adj = adj + adj.T
+    adj.data = np.minimum(adj.data, 1.0)  # binary adjacency
 
-        if not found:
-            # All k neighbours already visited — advance fallback pointer
-            while fallback < n and visited[fallback]:
-                fallback += 1
-            if fallback < n:
-                current = fallback
-                visited[current] = True
-                perm[pos] = current
-                pos += 1
-
+    # ------------------------------------------------------------------
+    # Reverse Cuthill-McKee — bandwidth-reducing permutation.
+    # This is a BFS from a pseudo-peripheral node, visiting neighbours
+    # in ascending-degree order.  O(n + nnz(adj)).
+    # ------------------------------------------------------------------
+    perm = reverse_cuthill_mckee(adj, symmetric_mode=True)
     return perm
 
 
@@ -169,6 +152,9 @@ def main():
         "matrices/lp_stocfor3/lp_stocfor3.mtx",
         "matrices/thermal2/thermal2.mtx",
         "matrices/webbase-2001/webbase-2001.mtx",
+        "matrices/indochina-2004/indochina-2004.mtx",
+        "matrices/kmer_V2a/kmer_V2a.mtx",
+        "matrices/PR02R/PR02R.mtx",
     ]
 
     for path_str in test_matrices:
@@ -183,7 +169,7 @@ def main():
         print(f"  rows={A.shape[0]}, cols={A.shape[1]}, nnz={A.nnz}")
 
         start = time.perf_counter()
-        reorder(A, W=1, n_neighbors=15)
+        reorder(A, W=32, n_neighbors=5)
         elapsed = time.perf_counter() - start
         print(f"  Reordering completed | Time (s) = {elapsed:.4f}")
         print()
