@@ -1,0 +1,18 @@
+variables:
+  ranks: [4,8]
+  matrix: "./matrices_partitioning/matrices_list.txt"
+  args:
+    - "-r 2 -c 2 -p 0 -t 0"
+    - "-r 2 -c 2 -p 1 -t 0"
+    - "-r 2 -c 2 -p 2 -t 0"
+    - "-r 2 -c 2 -p 3 -t 0"
+    - "-r 2 -c 2 -p 4 -t 0"
+    - "-r 2 -c 2 -p 5 -t 0"
+
+
+command: "mpirun -np {ranks} --map-by :OVERSUBSCRIBE ./build/test_dmmio -f {matrix} {args}"
+
+jobs:
+  - config: "{ranks}_ranks"
+    config_jobs:
+      - tag: "partitioning_test"

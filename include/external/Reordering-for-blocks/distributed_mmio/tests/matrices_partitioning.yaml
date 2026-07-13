@@ -1,0 +1,9 @@
+path: ./matrices_partitioning
+
+square:
+  generators:
+    graph500:
+      scale:
+        - 5
+      edge_factor:
+        - 32

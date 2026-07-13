@@ -1,0 +1,1248 @@
+
+============================================================
+JOB STATUS OVERVIEW
+============================================================
+
+Total jobs: 237520
+
+  ✓ COMPLETED    165987 ( 69.9%)
+  ✗ FAILED        58287 ( 24.5%)
+  ► RUNNING          92 (  0.0%)
+  ⏱ TIMEOUT         171 (  0.1%)
+  ⊘ CANCELLED      3170 (  1.3%)
+
+============================================================
+DETAILED BREAKDOWN BY TAG AND VARIABLES
+============================================================
+
+✓ COMPLETED (165987 jobs)
+--------------------------------------------------
+
+  [CUSPARSE_SPMM_CSR_SYMMETRIC] - 22557 jobs
+    perm=random1D: 3360 jobs (1109 matrices)
+    perm=SB_amd: 3330 jobs (1099 matrices)
+    perm=SB_rabbit: 3327 jobs (1098 matrices)
+    perm=SB_degree: 3321 jobs (1096 matrices)
+    perm=SB_patoh: 3294 jobs (1087 matrices)
+    perm=SB_metis: 3237 jobs (1068 matrices)
+    perm=SB_rcm: 2688 jobs (885 matrices)
+
+  [CUSPARSE_SPMM_BSR_SYMMETRIC] - 22557 jobs
+    perm=random1D: 3360 jobs (1109 matrices)
+    perm=SB_amd: 3330 jobs (1099 matrices)
+    perm=SB_rabbit: 3327 jobs (1098 matrices)
+    perm=SB_degree: 3321 jobs (1096 matrices)
+    perm=SB_patoh: 3294 jobs (1087 matrices)
+    perm=SB_metis: 3237 jobs (1068 matrices)
+    perm=SB_rcm: 2688 jobs (885 matrices)
+
+  [SMAT_SPMM_SYMMETRIC] - 22556 jobs
+    perm=random1D: 3360 jobs (1109 matrices)
+    perm=SB_amd: 3330 jobs (1099 matrices)
+    perm=SB_rabbit: 3326 jobs (1098 matrices)
+    perm=SB_degree: 3321 jobs (1096 matrices)
+    perm=SB_patoh: 3294 jobs (1087 matrices)
+    perm=SB_metis: 3237 jobs (1068 matrices)
+    perm=SB_rcm: 2688 jobs (885 matrices)
+
+  [ASPT_SPMM_SYMMETRIC] - 22056 jobs
+    perm=random1D: 3360 jobs (1109 matrices)
+    perm=SB_amd: 3330 jobs (1099 matrices)
+    perm=SB_rabbit: 3327 jobs (1098 matrices)
+    perm=SB_degree: 2778 jobs (1096 matrices)
+    perm=SB_patoh: 2753 jobs (1087 matrices)
+    perm=SB_metis: 2712 jobs (1068 matrices)
+    perm=SB_rcm: 2252 jobs (884 matrices)
+    perm=SB_gray: 1544 jobs (506 matrices)
+
+  [SMAT_SPMM_ROW] - 8174 jobs
+    perm=random1D: 2912 jobs (1444 matrices)
+    perm=SB_degree: 2814 jobs (1395 matrices)
+    perm=SB_gray: 2448 jobs (1212 matrices)
+
+  [ASPT_SPMM_ROW] - 8174 jobs
+    perm=random1D: 2912 jobs (1444 matrices)
+    perm=SB_degree: 2814 jobs (1395 matrices)
+    perm=SB_gray: 2448 jobs (1212 matrices)
+
+  [CUSPARSE_SPMM_CSR_ROW] - 8173 jobs
+    perm=random1D: 2912 jobs (1444 matrices)
+    perm=SB_degree: 2813 jobs (1395 matrices)
+    perm=SB_gray: 2448 jobs (1212 matrices)
+
+  [CUSPARSE_SPMM_BSR_ROW] - 8167 jobs
+    perm=random1D: 2910 jobs (1443 matrices)
+    perm=SB_degree: 2812 jobs (1394 matrices)
+    perm=SB_gray: 2445 jobs (1211 matrices)
+
+  [ANALYSIS_SYMMETRIC] - 7519 jobs
+    perm=random1D: 1120 jobs (1109 matrices)
+    perm=SB_amd: 1110 jobs (1099 matrices)
+    perm=SB_rabbit: 1109 jobs (1098 matrices)
+    perm=SB_degree: 1107 jobs (1096 matrices)
+    perm=SB_patoh: 1098 jobs (1087 matrices)
+    perm=SB_metis: 1079 jobs (1068 matrices)
+    perm=SB_rcm: 896 jobs (885 matrices)
+
+  [SMAT_SPMM_NO_REORDER] - 4377 jobs
+    perm=None: 4377 jobs (1444 matrices)
+
+  [CUSPARSE_SPMM_CSR_NO_REORDER] - 4121 jobs
+    perm=None: 4121 jobs (1444 matrices)
+
+  [ANALYSIS_ROW] - 4087 jobs
+    perm=random1D: 1456 jobs (1444 matrices)
+    perm=SB_degree: 1407 jobs (1395 matrices)
+    perm=SB_gray: 1224 jobs (1212 matrices)
+
+  [CUSPARSE_SPMM_BSR_NO_REORDER] - 3554 jobs
+    perm=None: 3554 jobs (1444 matrices)
+
+  [ASPT_SPMM_NO_REORDER] - 2920 jobs
+    perm=None: 2920 jobs (1444 matrices)
+
+  [ANALYSIS_NO_REORDER] - 2668 jobs
+    perm=None: 2668 jobs (1444 matrices)
+
+  [random1D] - 2059 jobs
+    perm=None: 2059 jobs (1444 matrices)
+
+  [random2D] - 1459 jobs
+    perm=None: 1459 jobs (1444 matrices)
+
+  [SB_degree] - 1396 jobs
+    perm=None: 1396 jobs (1381 matrices)
+
+  [SPARTA_reorder] - 1393 jobs
+    perm=None: 1393 jobs (1378 matrices)
+
+  [SB_gray] - 1210 jobs
+    perm=None: 1210 jobs (1198 matrices)
+
+  [SB_rabbit] - 1195 jobs
+    perm=None: 1195 jobs (1182 matrices)
+
+  [SB_amd] - 1177 jobs
+    perm=None: 1177 jobs (1166 matrices)
+
+  [SB_patoh] - 1164 jobs
+    perm=None: 1164 jobs (1153 matrices)
+
+  [SB_metis] - 1154 jobs
+    perm=None: 1154 jobs (1143 matrices)
+
+  [SB_slashburn] - 1077 jobs
+    perm=None: 1077 jobs (1066 matrices)
+
+  [SB_rcm] - 1029 jobs
+    perm=None: 1029 jobs (1020 matrices)
+
+  [GraphBLAS] - 7 jobs
+    perm=None: 7 jobs (7 matrices)
+
+  [CuSPARSE_CSR_SPMM] - 7 jobs
+    perm=graphblas: 7 jobs (7 matrices)
+
+✗ FAILED (58287 jobs)
+--------------------------------------------------
+
+  [ASPT_SPMM_SYMMETRIC] - 13539 jobs
+    perm=SB_slashburn: 3241 jobs (1082 matrices)
+    perm=SB_rcm: 2122 jobs (987 matrices)
+    perm=SB_metis: 1665 jobs (896 matrices)
+    perm=SB_patoh: 1624 jobs (893 matrices)
+    perm=SB_degree: 1599 jobs (883 matrices)
+    perm=SB_rabbit: 1043 jobs (347 matrices)
+    perm=SB_amd: 1038 jobs (347 matrices)
+    perm=random1D: 1009 jobs (334 matrices)
+    perm=SB_gray: 198 jobs (66 matrices)
+
+  [CUSPARSE_SPMM_CSR_SYMMETRIC] - 11584 jobs
+    perm=SB_slashburn: 3425 jobs (1138 matrices)
+    perm=SB_rcm: 1689 jobs (563 matrices)
+    perm=SB_metis: 1140 jobs (380 matrices)
+    perm=SB_patoh: 1083 jobs (361 matrices)
+    perm=SB_degree: 1056 jobs (349 matrices)
+    perm=SB_rabbit: 1050 jobs (349 matrices)
+    perm=SB_amd: 1047 jobs (349 matrices)
+    perm=random1D: 1017 jobs (336 matrices)
+    perm=SB_gray: 77 jobs (26 matrices)
+
+  [SMAT_SPMM_SYMMETRIC] - 11584 jobs
+    perm=SB_slashburn: 3501 jobs (1172 matrices)
+    perm=SB_rcm: 1689 jobs (563 matrices)
+    perm=SB_metis: 1140 jobs (380 matrices)
+    perm=SB_patoh: 1083 jobs (361 matrices)
+    perm=SB_degree: 1056 jobs (349 matrices)
+    perm=SB_rabbit: 1051 jobs (350 matrices)
+    perm=SB_amd: 1047 jobs (349 matrices)
+    perm=random1D: 1017 jobs (336 matrices)
+
+  [CUSPARSE_SPMM_BSR_SYMMETRIC] - 11259 jobs
+    perm=SB_slashburn: 3177 jobs (1070 matrices)
+    perm=SB_rcm: 1689 jobs (563 matrices)
+    perm=SB_metis: 1140 jobs (380 matrices)
+    perm=SB_patoh: 1083 jobs (361 matrices)
+    perm=SB_degree: 1056 jobs (349 matrices)
+    perm=SB_rabbit: 1050 jobs (349 matrices)
+    perm=SB_amd: 1047 jobs (349 matrices)
+    perm=random1D: 1017 jobs (336 matrices)
+
+  [ANALYSIS_SYMMETRIC] - 5612 jobs
+    perm=SB_slashburn: 1459 jobs (1444 matrices)
+    perm=SB_gray: 1459 jobs (1444 matrices)
+    perm=SB_rcm: 563 jobs (563 matrices)
+    perm=SB_metis: 380 jobs (380 matrices)
+    perm=SB_patoh: 361 jobs (361 matrices)
+    perm=SB_degree: 352 jobs (349 matrices)
+    perm=SB_rabbit: 350 jobs (349 matrices)
+    perm=SB_amd: 349 jobs (349 matrices)
+    perm=random1D: 339 jobs (336 matrices)
+
+  [CUSPARSE_SPMM_BSR_ROW] - 580 jobs
+    perm=SB_gray: 470 jobs (235 matrices)
+    perm=SB_degree: 104 jobs (52 matrices)
+    perm=random1D: 6 jobs (3 matrices)
+
+  [SMAT_SPMM_ROW] - 580 jobs
+    perm=SB_gray: 470 jobs (235 matrices)
+    perm=SB_degree: 104 jobs (52 matrices)
+    perm=random1D: 6 jobs (3 matrices)
+
+  [CUSPARSE_SPMM_CSR_ROW] - 580 jobs
+    perm=SB_gray: 470 jobs (235 matrices)
+    perm=SB_degree: 104 jobs (52 matrices)
+    perm=random1D: 6 jobs (3 matrices)
+
+  [ASPT_SPMM_ROW] - 580 jobs
+    perm=SB_gray: 470 jobs (235 matrices)
+    perm=SB_degree: 104 jobs (52 matrices)
+    perm=random1D: 6 jobs (3 matrices)
+
+  [SB_slashburn] - 361 jobs
+    perm=None: 361 jobs (361 matrices)
+
+  [SB_metis] - 294 jobs
+    perm=None: 294 jobs (294 matrices)
+
+  [ANALYSIS_ROW] - 290 jobs
+    perm=SB_gray: 235 jobs (235 matrices)
+    perm=SB_degree: 52 jobs (52 matrices)
+    perm=random1D: 3 jobs (3 matrices)
+
+  [SB_patoh] - 283 jobs
+    perm=None: 283 jobs (283 matrices)
+
+  [SB_rcm] - 282 jobs
+    perm=None: 282 jobs (282 matrices)
+
+  [SB_amd] - 282 jobs
+    perm=None: 282 jobs (282 matrices)
+
+  [SB_rabbit] - 263 jobs
+    perm=None: 263 jobs (263 matrices)
+
+  [SB_gray] - 249 jobs
+    perm=None: 249 jobs (249 matrices)
+
+  [SB_degree] - 63 jobs
+    perm=None: 63 jobs (63 matrices)
+
+  [CuSPARSE_CSR_SPMM] - 21 jobs
+    perm=graphblas: 21 jobs (7 matrices)
+
+  [SPARTA_reorder] - 1 jobs
+    perm=None: 1 jobs (1 matrices)
+
+► RUNNING (92 jobs)
+--------------------------------------------------
+
+  [SPARTA_reorder] - 65 jobs
+    perm=None: 65 jobs (65 matrices)
+
+  [SB_slashburn] - 21 jobs
+    perm=None: 21 jobs (21 matrices)
+
+  [ASPT_SPMM_SYMMETRIC] - 3 jobs
+    perm=SB_rcm: 3 jobs (1 matrices)
+
+  [CUSPARSE_SPMM_CSR_SYMMETRIC] - 2 jobs
+    perm=SB_gray: 2 jobs (2 matrices)
+
+  [SB_rabbit] - 1 jobs
+    perm=None: 1 jobs (1 matrices)
+
+⏱ TIMEOUT (171 jobs)
+--------------------------------------------------
+
+  [SB_rcm] - 148 jobs
+    perm=None: 148 jobs (148 matrices)
+
+  [SB_patoh] - 12 jobs
+    perm=None: 12 jobs (12 matrices)
+
+  [SB_metis] - 11 jobs
+    perm=None: 11 jobs (11 matrices)
+
+⊘ CANCELLED (3170 jobs)
+--------------------------------------------------
+
+  [ASPT_SPMM_NO_REORDER] - 1457 jobs
+    perm=None: 1457 jobs (1442 matrices)
+
+  [CUSPARSE_SPMM_BSR_NO_REORDER] - 1457 jobs
+    perm=None: 1457 jobs (1442 matrices)
+
+  [CUSPARSE_SPMM_CSR_NO_REORDER] - 256 jobs
+    perm=None: 256 jobs (256 matrices)
+
+============================================================
+FAILED/TIMEOUT BREAKDOWN (58458 jobs)
+============================================================
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_slashburn
+    Jobs: 3501, Matrices: 1172
+
+    Example error (job 329569, matrix: bcspwr10.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_slashburn/bcspwr10.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_slashburn
+    Jobs: 3425, Matrices: 1138
+
+    Example error (job 321325, matrix: psse0.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_slashburn/psse0.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_slashburn
+    Jobs: 3241, Matrices: 1082
+
+    Example error (job 271685, matrix: model4.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_slashburn/model4.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_slashburn
+    Jobs: 3177, Matrices: 1070
+
+    Example error (job 284194, matrix: g7jac040.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_slashburn/g7jac040.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_rcm
+    Jobs: 2122, Matrices: 987
+
+    Example error (job 271691, matrix: model5.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_rcm/model5.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_rcm
+    Jobs: 1689, Matrices: 563
+
+    Example error (job 281925, matrix: cavity09.mtx):
+    ----------------------------------------
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 72, in load_and_permute_...
+    | A_cpu = A_cpu[row_perm, :]
+    | File "/home/paolo.syloslabini/.venv/lib64/python3.9/site-packages/scipy/sparse/_index.py", line 52, ...
+    | row, col = self._validate_indices(key)
+    | File "/home/paolo.syloslabini/.venv/lib64/python3.9/site-packages/scipy/sparse/_index.py", line 186,...
+    | row = self._asindices(row, M)
+    | File "/home/paolo.syloslabini/.venv/lib64/python3.9/site-packages/scipy/sparse/_index.py", line 220,...
+    | raise IndexError('index (%d) out of range' % max_indx)
+    | IndexError: index (484420832) out of range
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_rcm
+    Jobs: 1689, Matrices: 563
+
+    Example error (job 243701, matrix: lp_ken_11.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_rcm/lp_ken_11.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_rcm
+    Jobs: 1689, Matrices: 563
+
+    Example error (job 253697, matrix: mark3jac020sc.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_rcm/mark3jac020sc.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_metis
+    Jobs: 1665, Matrices: 896
+
+    Example error (job 271689, matrix: model5.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_metis/model5.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_patoh
+    Jobs: 1624, Matrices: 893
+
+    Example error (job 271693, matrix: model5.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_patoh/model5.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_degree
+    Jobs: 1599, Matrices: 883
+
+    Example error (job 271687, matrix: model5.mtx):
+    ----------------------------------------
+    | Error loading matrix: Column permutation size (1888) doesn't match matrix columns (11802)
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_slashburn
+    Jobs: 1459, Matrices: 1444
+
+    Example error (job 357198, matrix: nm2010.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: name 'load_matrix' is not defined
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_matrix(args.matrix, args.perm, args.perm_type)
+    | NameError: name 'load_matrix' is not defined
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_gray
+    Jobs: 1459, Matrices: 1444
+
+    Example error (job 360224, matrix: rail_20209.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: name 'load_matrix' is not defined
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_matrix(args.matrix, args.perm, args.perm_type)
+    | NameError: name 'load_matrix' is not defined
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_metis
+    Jobs: 1140, Matrices: 380
+
+    Example error (job 237777, matrix: l30.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_metis/l30.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_metis
+    Jobs: 1140, Matrices: 380
+
+    Example error (job 243700, matrix: lp_ken_11.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_metis/lp_ken_11.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_metis
+    Jobs: 1140, Matrices: 380
+
+    Example error (job 253024, matrix: poli_large.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_metis/poli_large.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_patoh
+    Jobs: 1083, Matrices: 361
+
+    Example error (job 321322, matrix: psse0.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (26722) doesn't match matrix columns (11028)
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_patoh
+    Jobs: 1083, Matrices: 361
+
+    Example error (job 294919, matrix: model3.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_patoh/model3.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_patoh
+    Jobs: 1083, Matrices: 361
+
+    Example error (job 251991, matrix: gemat1.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_patoh/gemat1.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_degree
+    Jobs: 1056, Matrices: 349
+
+    Example error (job 237776, matrix: l30.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (2701) doesn't match matrix columns (16281)
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_degree
+    Jobs: 1056, Matrices: 349
+
+    Example error (job 321263, matrix: Chebyshev3.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_degree/Chebyshev3.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_degree
+    Jobs: 1056, Matrices: 349
+
+    Example error (job 251987, matrix: gemat1.mtx):
+    ----------------------------------------
+    | Error running SMaT: Column permutation size (4929) doesn't match matrix columns (10595)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/smat_spmm.py", line 29, in main
+    | results = run_smat_spmm(
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/smat_utils.py", line 95, in run_smat_s...
+    | A_cpu = load_and_permute_matrix(matrix_path, perm_path, perm_type, dtype)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (4929) doesn't match matrix columns (10595)
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_rabbit
+    Jobs: 1051, Matrices: 350
+
+    Example error (job 251990, matrix: gemat1.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_rabbit/gemat1.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_rabbit
+    Jobs: 1050, Matrices: 349
+
+    Example error (job 294917, matrix: model3.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_rabbit/model3.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_rabbit
+    Jobs: 1050, Matrices: 349
+
+    Example error (job 243702, matrix: lp_ken_11.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_rabbit/lp_ken_11.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=SB_amd
+    Jobs: 1047, Matrices: 349
+
+    Example error (job 300553, matrix: EternityII_A.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_amd/EternityII_A.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_amd
+    Jobs: 1047, Matrices: 349
+
+    Example error (job 243705, matrix: lp_ken_13.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 66, in load_and_permute_...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 25, in load_permutation_...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_amd/lp_ken_13.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=SB_amd
+    Jobs: 1047, Matrices: 349
+
+    Example error (job 251986, matrix: gemat1.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_amd/gemat1.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_rabbit
+    Jobs: 1043, Matrices: 347
+
+    Example error (job 219240, matrix: pds-30.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_rabbit/pds-30.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_amd
+    Jobs: 1038, Matrices: 347
+
+    Example error (job 230376, matrix: Delor64K.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_amd/Delor64K.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=random1D
+    Jobs: 1017, Matrices: 336
+
+    Example error (job 243704, matrix: lp_ken_13.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (28632) doesn't match matrix columns (42659)
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_SYMMETRIC, perm=random1D
+    Jobs: 1017, Matrices: 336
+
+    Example error (job 294907, matrix: model3.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (1609) doesn't match matrix columns (4578)
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_SYMMETRIC, perm=random1D
+    Jobs: 1017, Matrices: 336
+
+    Example error (job 251985, matrix: gemat1.mtx):
+    ----------------------------------------
+    | Error running SMaT: Column permutation size (4929) doesn't match matrix columns (10595)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/smat_spmm.py", line 29, in main
+    | results = run_smat_spmm(
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/smat_utils.py", line 95, in run_smat_s...
+    | A_cpu = load_and_permute_matrix(matrix_path, perm_path, perm_type, dtype)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (4929) doesn't match matrix columns (10595)
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=random1D
+    Jobs: 1009, Matrices: 334
+
+    Example error (job 217939, matrix: fxm3_6.mtx):
+    ----------------------------------------
+    | Error loading matrix: Row permutation size (6200) doesn't match matrix rows (5026)
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_rcm
+    Jobs: 563, Matrices: 563
+
+    Example error (job 159140, matrix: cryg10000.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: [Errno 2] No such file or directory: 'perms/SB_rcm/cryg10000.perm'
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_rcm/cryg10000.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_ROW, perm=SB_gray
+    Jobs: 470, Matrices: 235
+
+    Example error (job 178806, matrix: mhd1280b.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_gray/mhd1280b.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_ROW, perm=SB_gray
+    Jobs: 470, Matrices: 235
+
+    Example error (job 196627, matrix: df2177.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_gray/df2177.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_ROW, perm=SB_gray
+    Jobs: 470, Matrices: 235
+
+    Example error (job 186523, matrix: mri2.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_gray/mri2.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_ROW, perm=SB_gray
+    Jobs: 470, Matrices: 235
+
+    Example error (job 168670, matrix: rail516.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_gray/rail516.perm'
+    ----------------------------------------
+
+  TIMEOUT: SB_rcm, perm=None
+    Jobs: 430, Matrices: 430
+
+    Example error (job 143551, matrix: lpi_klein3.mtx):
+    ----------------------------------------
+    | [RCM] Started with 3 arguments
+    | [RCM]   argv[0] = ./MtxPerm/SPARSEBASE/build/rcm_perm
+    | [RCM]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_10...
+    | [RCM]   argv[2] = perms/SB_rcm/lpi_klein3.perm
+    | [RCM] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSpars...
+    | [RCM] Matrix loaded: 994 vertices
+    | [RCM] Computing reordering...
+    | /var/spool/slurmd/job143551/slurm_script: line 36: 3564143 Segmentation fault      ./MtxPerm/SPARSEB...
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_metis
+    Jobs: 380, Matrices: 380
+
+    Example error (job 160252, matrix: psse0.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: Column permutation size (26722) doesn't match matrix columns (11028)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 79, in load_a...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (26722) doesn't match matrix columns (11028)
+    ----------------------------------------
+
+  FAILED: SB_slashburn, perm=None
+    Jobs: 361, Matrices: 361
+
+    Example error (job 375163, matrix: mk11-b2.mtx):
+    ----------------------------------------
+    | [SlashBurn] Started with 5 arguments
+    | [SlashBurn]   argv[0] = ./MtxPerm/SPARSEBASE/build/slashburn_perm
+    | [SlashBurn]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSpa...
+    | [SlashBurn]   argv[2] = perms/SB_slashburn/mk11-b2.perm
+    | [SlashBurn]   argv[3] = --k
+    | [SlashBurn]   argv[4] = 1
+    | [SlashBurn] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/Suit...
+    | [SlashBurn] Matrix loaded: 6930 x 990
+    | Error: SlashBurn requires a square matrix. Got 6930 x 990
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_patoh
+    Jobs: 361, Matrices: 361
+
+    Example error (job 160255, matrix: psse0.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: Column permutation size (26722) doesn't match matrix columns (11028)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 79, in load_a...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (26722) doesn't match matrix columns (11028)
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_degree
+    Jobs: 352, Matrices: 349
+
+    Example error (job 160251, matrix: psse0.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: Column permutation size (26722) doesn't match matrix columns (11028)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 79, in load_a...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (26722) doesn't match matrix columns (11028)
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_rabbit
+    Jobs: 350, Matrices: 349
+
+    Example error (job 211169, matrix: sctap1-2b.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: [Errno 2] No such file or directory: 'perms/SB_rabbit/sctap1-2b.perm'
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_rabbit/sctap1-2b.perm'
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=SB_amd
+    Jobs: 349, Matrices: 349
+
+    Example error (job 160250, matrix: psse0.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: Column permutation size (26722) doesn't match matrix columns (11028)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 79, in load_a...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (26722) doesn't match matrix columns (11028)
+    ----------------------------------------
+
+  FAILED: ANALYSIS_SYMMETRIC, perm=random1D
+    Jobs: 339, Matrices: 336
+
+    Example error (job 160249, matrix: psse0.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: Column permutation size (26722) doesn't match matrix columns (11028)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 79, in load_a...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (26722) doesn't match matrix columns (11028)
+    ----------------------------------------
+
+  TIMEOUT: SB_metis, perm=None
+    Jobs: 305, Matrices: 305
+
+    Example error (job 91722, matrix: poli_large.mtx):
+    ----------------------------------------
+    | [METIS-Part]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSp...
+    | [METIS-Part]   argv[2] = perms/SB_metis/poli_large.perm
+    | [METIS-Part]   argv[3] = --niter
+    | [METIS-Part]   argv[4] = 1
+    | [METIS-Part] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/Sui...
+    | [METIS-Part] Matrix loaded: 15575 vertices
+    | [METIS-Part] Number of partitions: 16
+    | [METIS-Part] Objective: cut
+    | [METIS-Part] Computing partitioning...
+    | /var/spool/slurmd/job91722/slurm_script: line 36: 2968065 Segmentation fault      (core dumped) ./Mt...
+    ----------------------------------------
+
+  TIMEOUT: SB_patoh, perm=None
+    Jobs: 295, Matrices: 295
+
+    Example error (job 148565, matrix: RFdevice.mtx):
+    ----------------------------------------
+    | [PaToH] Started with 3 arguments
+    | [PaToH]   argv[0] = ./MtxPerm/SPARSEBASE/build/patoh_perm
+    | [PaToH]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_...
+    | [PaToH]   argv[2] = perms/SB_patoh/RFdevice.perm
+    | [PaToH] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSpa...
+    | [PaToH] Matrix loaded: 74104 vertices
+    | [PaToH] Computing hypergraph partitioning with 2 partitions...
+    | double free or corruption (out)
+    | /var/spool/slurmd/job148565/slurm_script: line 36: 3942984 Aborted                 ./MtxPerm/SPARSEB...
+    ----------------------------------------
+
+  FAILED: SB_amd, perm=None
+    Jobs: 282, Matrices: 282
+
+    Example error (job 144696, matrix: beause.mtx):
+    ----------------------------------------
+    | [AMD] Started with 3 arguments
+    | [AMD]   argv[0] = ./MtxPerm/SPARSEBASE/build/amd_perm
+    | [AMD]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_10...
+    | [AMD]   argv[2] = perms/SB_amd/beause.perm
+    | [AMD] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSpars...
+    | [AMD] Matrix loaded: 497 vertices
+    | [AMD] Computing reordering...
+    | Error: AMD reordering failed
+    ----------------------------------------
+
+  FAILED: SB_rabbit, perm=None
+    Jobs: 263, Matrices: 263
+
+    Example error (job 200498, matrix: qc324.mtx):
+    ----------------------------------------
+    | [Rabbit] Started with 3 arguments
+    | [Rabbit]   argv[0] = ./MtxPerm/SPARSEBASE/build/rabbit_perm
+    | [Rabbit]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse...
+    | [Rabbit]   argv[2] = perms/SB_rabbit/qc324.perm
+    | [Rabbit] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSp...
+    | munmap_chunk(): invalid pointer
+    | /var/spool/slurmd/job200498/slurm_script: line 36: 1734783 Aborted                 (core dumped) ./M...
+    ----------------------------------------
+
+  FAILED: SB_gray, perm=None
+    Jobs: 249, Matrices: 249
+
+    Example error (job 141825, matrix: qc2534.mtx):
+    ----------------------------------------
+    | [Gray] Started with 3 arguments
+    | [Gray]   argv[0] = ./MtxPerm/SPARSEBASE/build/gray_perm
+    | [Gray]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1...
+    | [Gray]   argv[2] = perms/SB_gray/qc2534.perm
+    | [Gray] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSpar...
+    | /var/spool/slurmd/job141825/slurm_script: line 36: 3960625 Segmentation fault      (core dumped) ./M...
+    ----------------------------------------
+
+  FAILED: ANALYSIS_ROW, perm=SB_gray
+    Jobs: 235, Matrices: 235
+
+    Example error (job 152513, matrix: ABACUS_shell_hd.mtx):
+    ----------------------------------------
+    | self.data.astype(dtype, casting=casting, copy=True),
+    | Error: [Errno 2] No such file or directory: 'perms/SB_gray/ABACUS_shell_hd.perm'
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_gray/ABACUS_shell_hd.perm'
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_SYMMETRIC, perm=SB_gray
+    Jobs: 198, Matrices: 66
+
+    Example error (job 361112, matrix: mbeause.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_gray/mbeause.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_ROW, perm=SB_degree
+    Jobs: 104, Matrices: 52
+
+    Example error (job 178803, matrix: mhd1280b.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_degree/mhd1280b.perm'
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_ROW, perm=SB_degree
+    Jobs: 104, Matrices: 52
+
+    Example error (job 196613, matrix: crew1.mtx):
+    ----------------------------------------
+    | Error: [Errno 2] No such file or directory: 'perms/SB_degree/crew1.perm'
+    | To install SMaT, run: bash operators/install_smat.sh
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_ROW, perm=SB_degree
+    Jobs: 104, Matrices: 52
+
+    Example error (job 167900, matrix: bloweybq.mtx):
+    ----------------------------------------
+    | Error loading matrix: [Errno 2] No such file or directory: 'perms/SB_degree/bloweybq.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_ROW, perm=SB_degree
+    Jobs: 104, Matrices: 52
+
+    Example error (job 183088, matrix: qc2534.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_degree/qc2534.perm'
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_SYMMETRIC, perm=SB_gray
+    Jobs: 77, Matrices: 26
+
+    Example error (job 372574, matrix: world.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/utils.py", line 76, in load_and_permute_...
+    | raise ValueError(f"Column permutation size ({len(col_perm)}) doesn't match matrix columns ({n})")
+    | ValueError: Column permutation size (34506) doesn't match matrix columns (67147)
+    ----------------------------------------
+
+  FAILED: SB_degree, perm=None
+    Jobs: 63, Matrices: 63
+
+    Example error (job 140399, matrix: mplate.mtx):
+    ----------------------------------------
+    | [Degree] Started with 3 arguments
+    | [Degree]   argv[0] = ./MtxPerm/SPARSEBASE/build/degree_perm
+    | [Degree]   argv[1] = /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse...
+    | [Degree]   argv[2] = perms/SB_degree/mplate.perm
+    | [Degree] Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSp...
+    | /var/spool/slurmd/job140399/slurm_script: line 36: 3375337 Segmentation fault      (core dumped) ./M...
+    ----------------------------------------
+
+  FAILED: ANALYSIS_ROW, perm=SB_degree
+    Jobs: 52, Matrices: 52
+
+    Example error (job 152512, matrix: ABACUS_shell_hd.mtx):
+    ----------------------------------------
+    | self.data.astype(dtype, casting=casting, copy=True),
+    | Error: [Errno 2] No such file or directory: 'perms/SB_degree/ABACUS_shell_hd.perm'
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 69, in load_a...
+    | row_perm, col_perm = load_permutation_file(perm_path, perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 28, in load_p...
+    | with open(perm_path, 'r') as f:
+    | FileNotFoundError: [Errno 2] No such file or directory: 'perms/SB_degree/ABACUS_shell_hd.perm'
+    ----------------------------------------
+
+  FAILED: CuSPARSE_CSR_SPMM, perm=graphblas
+    Jobs: 21, Matrices: 7
+
+    Example error (job 77086, matrix: bcsstk13.mtx):
+    ----------------------------------------
+    | python3: can't open file '/home/paolo.syloslabini/ReorderingSurvey-2026/operations/simple_cusparse_s...
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_CSR_ROW, perm=random1D
+    Jobs: 6, Matrices: 3
+
+    Example error (job 186741, matrix: ex3sta1.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 55, in <mo...
+    | sys.exit(main())
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_csr_spmm.py", line 29, in mai...
+    | A_cpu = load_and_permute_matrix(args.matrix_path, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 74, in load_a...
+    | raise ValueError(f"Row permutation size ({len(row_perm)}) doesn't match matrix rows ({m})")
+    | ValueError: Row permutation size (17443) doesn't match matrix rows (16782)
+    ----------------------------------------
+
+  FAILED: CUSPARSE_SPMM_BSR_ROW, perm=random1D
+    Jobs: 6, Matrices: 3
+
+    Example error (job 177854, matrix: fxm4_6.mtx):
+    ----------------------------------------
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 45, in <mo...
+    | main()
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_bsr_spmm.py", line 29, in mai...
+    | mat = load_and_permute_matrix(args.mtx, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 74, in load_a...
+    | raise ValueError(f"Row permutation size ({len(row_perm)}) doesn't match matrix rows ({m})")
+    | ValueError: Row permutation size (22400) doesn't match matrix rows (18892)
+    ----------------------------------------
+
+  FAILED: SMAT_SPMM_ROW, perm=random1D
+    Jobs: 6, Matrices: 3
+
+    Example error (job 195513, matrix: fxm3_6.mtx):
+    ----------------------------------------
+    | Error running SMaT: Row permutation size (6200) doesn't match matrix rows (5026)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/smat_spmm.py", line 29, in main
+    | results = run_smat_spmm(
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/smat_utils.py", line 95, in run_smat_s...
+    | A_cpu = load_and_permute_matrix(matrix_path, perm_path, perm_type, dtype)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 74, in load_a...
+    | raise ValueError(f"Row permutation size ({len(row_perm)}) doesn't match matrix rows ({m})")
+    | ValueError: Row permutation size (6200) doesn't match matrix rows (5026)
+    ----------------------------------------
+
+  FAILED: ASPT_SPMM_ROW, perm=random1D
+    Jobs: 6, Matrices: 3
+
+    Example error (job 167766, matrix: fxm4_6.mtx):
+    ----------------------------------------
+    | Error loading matrix: Row permutation size (22400) doesn't match matrix rows (18892)
+    ----------------------------------------
+
+  FAILED: ANALYSIS_ROW, perm=random1D
+    Jobs: 3, Matrices: 3
+
+    Example error (job 151107, matrix: fxm4_6.mtx):
+    ----------------------------------------
+    | Loading matrix: /home/paolo.syloslabini/ReorderingSurvey-2026/datasets/all-matrices/SuiteSparse_1000...
+    | Error: Row permutation size (22400) doesn't match matrix rows (18892)
+    | Traceback (most recent call last):
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/ANALYSIS/analyze.py", line 48, in main
+    | A_scipy = load_and_permute_matrix(args.matrix, args.perm, args.perm_type)
+    | File "/home/paolo.syloslabini/ReorderingSurvey-2026/operators/cusparse_utils.py", line 74, in load_a...
+    | raise ValueError(f"Row permutation size ({len(row_perm)}) doesn't match matrix rows ({m})")
+    | ValueError: Row permutation size (22400) doesn't match matrix rows (18892)
+    ----------------------------------------
+
+  FAILED: SPARTA_reorder, perm=None
+    Jobs: 1, Matrices: 1
+
+    Example error (job 373711, matrix: mk12-b5.mtx):
+    ----------------------------------------
+    | verbose_: 1
+    | seed_: 0
+    | multiplication_algo: 0
+    | B_cols: 1024
+    | warmup_: 1
+    | exp_repetitions_: 5
+    | n_streams: 4
+    | ___________________
+    | Running SPARTA: /home/paolo.syloslabini/ReorderingSurvey-2026/MtxPerm/SPARTA/repo/programs/general/M...
+    | SPARTA failed with error code -11
+    ----------------------------------------
+
+============================================================
+CROSS-CHECK: OPERATIONS vs ANALYSIS
+============================================================
+
+Completed operations: 137393
+Completed analysis: 14274
+
+[WARNING] 513 operation configs lack completed analysis:
+
+  perm=SB_gray, type=SYMMETRIC: 506 matrices
+    2D_27628_bjtcai.mtx, 2D_54019_highK.mtx, 3D_28984_Tetra.mtx, 3D_51448_3D.mtx, Alemdar.mtx ... and 501 more
+
+  perm=graphblas, type=UNKNOWN: 7 matrices
+    bcspwr10.mtx, bcsstk08.mtx, bcsstk09.mtx, bcsstk10.mtx, bcsstk11.mtx ... and 2 more
+
+============================================================
+SUMMARY
+============================================================
+
+Completion rate: 69.9%
+Failure rate: 24.6%
+In progress: 92 running, 0 pending
+
+[ACTION] 58458 jobs need attention (failed/timeout)
+  Run with --show-failed for details

@@ -1,0 +1,12 @@
+variables:
+  mtx: 'datasets/matrices_list_filtered.txt'
+
+preprocess: |
+  source ~/.venv/bin/activate
+  mtx_name=$(basename {mtx} .mtx)
+
+jobs:
+  - config: "perm"
+    config_jobs:
+      - tag: "ANALYSIS_NO_REORDER"
+        command: "python3 MtxPerm/ANALYSIS/analyze.py {mtx} --block-sizes 4 8 16 32 64 128"

@@ -1,0 +1,17 @@
+path: ./matrices_test
+
+square:
+  generators:
+    parmat:
+      defaults:
+        a: 0.25
+        b: 0.25
+        c: 0.25
+        undirected: 0
+        noDuplicateEdges: 1 # TODO test with this off
+      matrices:
+        - { N: 16, M: 255 }
+        - { N: 20, M: 2399 }
+        - { N: 37, M: 1368 }
+
+# TODO add rectangular (possibly, add a generator to MtxMan in the meanwhile)

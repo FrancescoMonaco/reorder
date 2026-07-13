@@ -1,0 +1,17 @@
+baldo:
+  scheduler: slurm
+
+  default_conf:
+    account: flavio.vella
+    partition: short
+    time: "00:02:00"
+    cpus_per_task: 1
+    nodes: 1
+    ntasks: 1
+    gpus: 0
+
+  configs:
+    - name: "perm"
+
+    - name: "gpu"
+      gpus: 1

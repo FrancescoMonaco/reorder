@@ -1,0 +1,11 @@
+[submodule "distributed_mmio"]
+	path = distributed_mmio
+	url = https://github.com/HicrestLaboratory/distributed_mmio.git
+[submodule "ccutils"]
+	path = ccutils
+	url = https://github.com/ThomasPasquali/ccutils.git
+[submodule "MtxPerm"]
+	path = MtxPerm
+	url = https://github.com/HicrestLaboratory/MtxPerm.git
+	ignore = untracked
+	branch = main

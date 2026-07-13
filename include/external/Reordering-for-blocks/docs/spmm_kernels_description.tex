@@ -1,0 +1,77 @@
+% SpMM Kernel Implementation Details
+% Include this in your paper's experimental setup / methodology section
+
+\subsection{SpMM Kernel Implementations}
+
+We evaluate seven GPU SpMM kernels spanning standard library routines, block-sparse formats, and Tensor Core--accelerated approaches.
+All kernels compute $C = \alpha \cdot A \cdot B + \beta \cdot C$, where $A$ is sparse ($m \times k$) and $B$ is dense ($k \times n$), with $\alpha = 1.0$ and $\beta = 0.0$.
+The dense matrix $B$ is tested with $n \in \{32, 256, 1024\}$ columns.
+Kernel execution time is measured using CUDA events with explicit synchronization; each kernel is preceded by a warmup iteration, followed by timed iterations whose average is reported.
+
+\paragraph{cuSPARSE CSR.}
+Uses the NVIDIA cuSPARSE library (CUDA 12.5) via CuPy 13.6.0.
+The sparse matrix is stored in Compressed Sparse Row (CSR) format.
+SpMM is performed through CuPy's \texttt{csr\_matrix.dot()} interface, which dispatches to \texttt{cusparseSpMM} with the generic sparse API.
+All values use single-precision floating point (FP32).
+Timing is performed with CuPy CUDA events over 5 iterations after a warmup call.
+
+\paragraph{cuSPARSE BSR.}
+Uses the cuSPARSE legacy BSR API (\texttt{cusparseSbsrmm}) from CUDA 12.5, implemented as a standalone C++ binary.
+The sparse matrix is first loaded in CSR format, then converted to Block Sparse Row (BSR) on the GPU using \texttt{cusparseXcsr2bsrNnz} and \texttt{cusparseScsr2bsr}.
+The default block size is $32 \times 32$.
+Both rows and columns are padded to the nearest multiple of the block dimension.
+The CSR-to-BSR conversion time is reported separately as preprocessing.
+All values use FP32. Timing uses CUDA events over 5 iterations.
+
+\paragraph{FlashSparse.}
+An FP16 Tensor Core--optimized SpMM kernel from the FlashSparse library~\cite{flashsparse2025},
+cloned from \url{https://github.com/ParCIS/FlashSparse} (commit \texttt{1687646}).
+The kernel operates on a preprocessed blocked format with a configurable window size; we use the \texttt{16\_1} mode (window$=16$, wide$=8$), which targets $16 \times 8$ Tensor Core tiles.
+Rows and columns are padded to multiples of 16.
+Sparse matrix values are set to all ones (FP16), consistent with GNN-style aggregation workloads for which FlashSparse was designed.
+Preprocessing is performed on the GPU via \texttt{FS\_Block\_gpu.preprocess\_gpu\_fs}, and SpMM is executed through \texttt{FS\_SpMM.forward\_fp16\_16}.
+Timing is handled internally by the FlashSparse kernel over 5 iterations.
+Requires the \texttt{FlashSparse} conda environment with PyTorch and CUDA 12.1.1.
+
+\paragraph{DTC-SpMM.}
+A Dynamic Tensor Core SpMM kernel from DTC-SpMM~\cite{dtcspmm2024},
+cloned from \url{https://github.com/HPMLL/DTC-SpMM_ASPLOS24} (commit \texttt{66eca26}).
+Uses $16 \times 8$ block tiles (BLK\_H$=16$, BLK\_W$=8$) with dynamic workload partitioning.
+The execution plan defaults to \texttt{float4\_split} for $n > 128$ and falls back to \texttt{float4\_nonsplit} otherwise.
+Preprocessing on the GPU constructs row-window offsets, TC-block tile IDs, and sparse-to-dense index mappings via \texttt{DTCSpMM.preprocess\_gpu}.
+The DTC-SpMM kernel internally runs 1000 iterations per call; timing with CUDA events divides the total elapsed time by 1000 to obtain the per-operation time.
+A single external iteration ($\texttt{n\_iterations}=1$) is used.
+Depends on the Sputnik library and glog; requires the \texttt{DTCSpMM} conda environment.
+
+\paragraph{ASpT.}
+Adaptive Sparse Tiling for GPU SpMM~\cite{aspt2019},
+cloned from \url{https://github.com/LucasWilkinson/ASpT-mirror} (commit \texttt{076b1a1}).
+Compiled as a standalone CUDA binary (\texttt{sspmm\_32}) with \texttt{-O3}, \texttt{--use\_fast\_math}, and architecture-specific \texttt{-gencode} flags.
+The binary accepts a Matrix Market file and the number of dense columns as arguments, and outputs GFLOPS and error rate to \texttt{SpMM\_GPU\_SP.out}.
+Timing is managed internally by the binary.
+The Python wrapper loads and optionally permutes the matrix, writes a temporary \texttt{.mtx} file, invokes the binary, and converts the reported GFLOPS back to execution time in milliseconds as $t = 2 \cdot \text{nnz} \cdot n / (\text{GFLOPS} \times 10^6)$.
+All values use FP32.
+
+\paragraph{SMaT.}
+Sparse Matrix Tensor Core--accelerated half-precision SpMM from SMaT~\cite{smat2024},
+cloned from \url{https://github.com/spcl/smat} (commit \texttt{057e44a}).
+Built via the provided \texttt{compile.sh} script targeting SM 8.0 (A100).
+The binary (\texttt{hgemm}) accepts a Matrix Market file via \texttt{--filename} and uses CUDA events internally to measure kernel execution time, reported as ``profiling time'' in milliseconds.
+Sparse matrix values are converted to FP16 before being passed to the binary; values exceeding the FP16 range ($65504$) are scaled down with a safety margin.
+The default block size is $32 \times 32$.
+Requires gflags (built locally if not available).
+
+\paragraph{AccSpMM.}
+A TF32 Tensor Core SpMM kernel from AccSpMM~\cite{accspmm2025},
+cloned from \url{https://github.com/YaoJianyu77/AccSpMM} (commit \texttt{4fe8d04}).
+Built with CMake targeting the detected GPU architecture.
+The binary (\texttt{mma}) accepts a Matrix Market file and the feature dimension (number of dense columns) as arguments.
+Results are written to a \texttt{result.csv} file with columns: matrix name, feature dimension, elapsed time (ms), and throughput (GFLOPS).
+The Python wrapper loads and optionally permutes the matrix, writes a temporary \texttt{.mtx} file, invokes the binary in an isolated directory, and parses \texttt{result.csv} for the kernel timing.
+Uses TF32 precision on Tensor Cores.
+
+\medskip
+\noindent\textbf{Common infrastructure.}
+All kernels share a common matrix loading and permutation pipeline implemented in Python (SciPy/NumPy).
+Permutations are applied before kernel invocation: for external binaries (cuSPARSE BSR, ASpT, SMaT, AccSpMM), the permuted matrix is written to a temporary Matrix Market file; for Python-native kernels (cuSPARSE CSR, FlashSparse, DTC-SpMM), the permuted SciPy sparse matrix is converted directly to GPU tensors.
+Loading, preprocessing, and SpMM execution times are reported separately for all kernels.

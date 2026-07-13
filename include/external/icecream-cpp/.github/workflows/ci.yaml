@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '*.md'
+      - 'LICENSE.txt'
+      - 'AUTHORS'
+      - '*.nix'
+      - 'example_project/**'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '*.md'
+      - 'LICENSE.txt'
+      - 'AUTHORS'
+      - '*.nix'
+      - 'example_project/**'
+
+jobs:
+  linux:
+    name: ${{ matrix.version }} C++${{ matrix.cpp }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [gcc54, gcc9, gcc14, clang8, clang19]
+        cpp: [11, 14, 17, 20, 23]
+        exclude:
+          - version: gcc54
+            cpp: 17
+          - version: gcc54
+            cpp: 20
+          - version: gcc54
+            cpp: 23
+          - version: gcc9
+            cpp: 20
+          - version: gcc9
+            cpp: 23
+          - version: clang8
+            cpp: 20
+          - version: clang8
+            cpp: 23
+        include:
+          - range_v3: ON
+          - range_v3: OFF
+            version: gcc54
+          - range_v3: OFF
+            cpp: 11
+
+          - libcxx: libstdc++11
+          - libcxx: libc++
+            version: clang8
+          - libcxx: libc++
+            version: clang19
+    steps:
+      - uses: actions/checkout@v4
+      - name: create container
+        run: docker run -dit --name ic-test -v $(pwd):/home/src renatogarcia/icecream-ci:${{ matrix.version }}-3 /bin/sh
+      - name: prepare
+        run: |
+          docker exec ic-test /bin/sh -c " \
+          conan profile detect && \
+          conan install ./src/tests -s compiler.cppstd=${{ matrix.cpp }} -s compiler.libcxx=${{ matrix.libcxx }} --output-folder=build --build=missing"
+      - name: build
+        run: |
+          docker exec ic-test /bin/sh -c " \
+          cmake /home/src -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake -DENABLE_RANGE_V3=${{ matrix.range_v3 }} -DENABLE_FMT=ON -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS='-Wall -Wextra -Wconversion -Wshadow -pedantic -Werror' -DCMAKE_BUILD_TYPE=Release && \
+          cmake --build ."
+      - name: run
+        run: |
+          docker exec ic-test ctest -V
+
+  windows:
+    name: ${{ matrix.name }} C++${{ matrix.cpp }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025]
+        cpp: [14, 17, 20, 23]
+        include:
+          - os: windows-2025
+            name: MSVC 17.14
+          - range_v3: ON
+          - range_v3: OFF
+            cpp: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Conan
+        run: pip3 install conan==2.11.0 --upgrade
+      - name: Prepare
+        run: |
+          conan profile detect
+          conan install ./tests -s compiler.cppstd=${{ matrix.cpp }} --output-folder=conan --build=missing
+      - name: build
+        # C4710 and C4711 warnings aren't affected by the '/external', so we disable them here globally
+        # C4619 ignore silencing unknown warnings
+        run: |
+          cmake . -DCMAKE_TOOLCHAIN_FILE="./conan/conan_toolchain.cmake" -DENABLE_RANGE_V3=${{ matrix.range_v3 }} -DENABLE_FMT=ON -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS="/experimental:external /Wall /WX /external:W0 /external:anglebrackets /EHsc /wd4619 /wd4710 /wd4711" -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+      - name: run
+        run: ctest -V -C Release
+
+  mingw:
+    name: MinGW ${{ matrix.sys }} C++${{ matrix.cpp }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp: [11, 14, 17, 20, 23]
+        sys:
+          - mingw64
+          - mingw32
+          - ucrt64
+          - clang64
+        include:
+          - range_v3: ON
+          - range_v3: OFF
+            cpp: 11
+          - range_v3: OFF
+            sys: mingw32
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          pacboy: >-
+            gcc:p
+            cmake:p
+            ninja:p
+            boost:p
+            fmt:p
+            ${{ matrix.sys != 'mingw32' && 'range-v3:p' || '' }}
+      - name: build
+        run: |
+          cmake . -G Ninja -DCMAKE_MODULE_PATH=$(pwd)/cmake -DENABLE_RANGE_V3=${{ matrix.range_v3 }} -DENABLE_FMT=ON -DBUILD_TESTING=ON -DCMAKE_CXX_STANDARD=${{ matrix.cpp }} -DCMAKE_CXX_FLAGS='-Wall -Wextra -Wconversion -Wshadow -pedantic -Werror -Wno-c2y-extensions' -DCMAKE_BUILD_TYPE=Release
+          cmake --build .
+      - name: run
+        run: ctest -V
+
+  macos:
+    name: Xcode C++${{ matrix.cpp }}
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        cpp: [11, 14, 17, 20, 23]
+        include:
+          - range_v3: ON
+          - range_v3: OFF
+            cpp: 11
+    env:
+      CPP_STANDARD: ${{ matrix.cpp }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: prepare
+        run: pipx install conan==2.11.0
+      - name: build
+        run: |
+          conan profile detect
+          conan install ./tests -s compiler.cppstd=${{ matrix.cpp }} --output-folder=build --build=missing
+          cmake . -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake -DENABLE_RANGE_V3=${{ matrix.range_v3 }} -DENABLE_FMT=ON -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS='-Wall -Wextra -Wconversion -Wshadow -pedantic -Werror' -DCMAKE_BUILD_TYPE=Release
+          cmake --build .
+      - name: run
+        run: ctest -V

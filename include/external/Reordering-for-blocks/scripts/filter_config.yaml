@@ -1,0 +1,95 @@
+# ===========================================================================
+# Centralized Filter Configuration
+# ===========================================================================
+# All plotting and table scripts read this file.
+#
+# CLI flags (--one-per-family, --include-rectangular, etc.) are still
+# accepted but they OVERRIDE values from this file. When no CLI flag is
+# given, the value below is used.
+# ===========================================================================
+
+# ---- Data Paths -----------------------------------------------------------
+data:
+  operations_csv: "results/results_operations.csv"
+  analysis_csv: "results/results_analysis.csv"
+  reordering_csv: "results/results_reordering.csv"
+  matrices_list: "datasets/matrices_list_filtered.txt"
+
+# Random-pipeline data paths (used when --random is passed).
+data_random:
+  operations_csv: "results/results_operations_random.csv"
+  analysis_csv: "results/results_analysis_random.csv"
+  reordering_csv: "results/results_reordering_random.csv"
+  matrices_list: "datasets/matrices_list_filtered.txt"
+
+# ---- Filtering ------------------------------------------------------------
+filters:
+  # Keep only one matrix per SuiteSparse family (reduces redundancy).
+  one_per_family: true
+
+  # Keep only square matrices (rows == cols).
+  square_only: true
+
+  # Minimum number of rows. Set to null to disable.
+  min_size: 0
+
+  # Maximum number of rows or columns. Matrices exceeding this in
+  # either dimension are removed. Set to null to disable.
+  max_size: null  # no upper bound — needed for large matrices (10^6–10^8 nnz)
+
+  # Remove matrices whose original bandwidth is below this threshold
+  # (trivially banded). Set to null to disable.
+  min_bandwidth: 2          # e.g. 5
+
+  # Remove very sparse matrices where nnz < factor * rows.
+  # Set to null to disable.
+  max_sparsity_factor: 1.5       # 2
+
+  # Remove purely diagonal matrices (nnz == rows for square matrices).
+  filter_diagonal: true
+
+  # Permutations (reordering algorithms) to exclude from ALL pipelines.
+  # Flat list only.  Per-pipeline exclusions go in the `pipelines` section.
+  exclude_perms:
+    - random2D
+
+  # Families to keep fully (not reduce to one representative).
+  # These contain diverse, non-duplicate matrices commonly used in sparse
+  # matrix research. Set to [] to disable.
+  keep_full_families:
+    - DIMACS10     # Graph challenge benchmarks
+    - SNAP         # Stanford social/web networks
+    - LAW          # Web graphs (Laboratory for Web Algorithmics)
+    - Newman       # Network science graphs
+    - Gleich       # Web and social network graphs
+    - Janna        # Large-scale FEM problems
+    - Norris       # Structural engineering benchmarks
+    - vanHeukelum  # Cage graphs, unique structure
+
+# ---- Pipeline-specific settings -------------------------------------------
+# Each pipeline corresponds to a (random?, perm_type) combination.
+# The --row / --symmetric CLI flags select the pipeline at runtime.
+pipelines:
+  symmetric:                # --symmetric (default) on main data
+    exclude_perms:
+      - SPARTA_reorder
+    exclude_kernels:
+      - BLEST_BFS
+  row:                      # --row on main data
+    exclude_perms: []
+    exclude_kernels:
+      - BLEST_BFS
+  random_symmetric:         # --symmetric on random data
+    exclude_perms: []
+    exclude_kernels:
+      - BLEST_BFS
+  random_row:               # --row on random data
+    exclude_perms: []
+    exclude_kernels:
+      - BLEST_BFS
+
+# ---- Display / Analysis Settings ------------------------------------------
+display:
+  # Correlation method used in all plots and tables.
+  # Choices: pearson, spearman, kendall
+  correlation_method: pearson

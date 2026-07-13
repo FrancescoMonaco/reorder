@@ -1,0 +1,121 @@
+variables:
+  mtx: 'datasets/matrices_list_filtered.txt'
+preprocess: |
+    source ~/.venv/bin/activate
+
+jobs:
+  - config: "perm"
+    config_jobs:
+
+      - tag: "GROOT_reorder"
+        preprocess: |
+          source MtxPerm/GROOT/groot_preprocess.sh
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/GROOT_reorder
+          perm_path=perms/GROOT_reorder/$mtx_name.perm
+        command: "python3 MtxPerm/GROOT/reorder.py {mtx} $perm_path"
+
+  - config: "perm"
+    config_jobs:
+
+      - tag: "random1D"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/random1D
+          perm_path=perms/random1D/$mtx_name.perm
+        command: "python3 MtxPerm/RANDOM/GB_random_permutation_1d.py {mtx} $perm_path"
+
+      - tag: "random2D"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/random2D
+          perm_path=perms/random2D/$mtx_name.perm
+        command: "python3 MtxPerm/RANDOM/GB_random_permutation_2d.py {mtx} $perm_path"
+
+      - tag: "SB_degree"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_degree
+          perm_path=perms/SB_degree/$mtx_name.perm
+        command: "python3 MtxPerm/RANDOM/GB_degree_permutation.py {mtx} $perm_path"
+
+      - tag: "SB_gray"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_gray
+          perm_path=perms/SB_gray/$mtx_name.perm
+        command: "./MtxPerm/SPARSEBASE/build/gray_perm {mtx} $perm_path"
+
+      - tag: "SB_rcm"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_rcm
+          perm_path=perms/SB_rcm/$mtx_name.perm
+        command: "python3 MtxPerm/RCM/rcm_perm.py {mtx} $perm_path"
+
+      - tag: "SB_metis"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_metis
+          perm_path=perms/SB_metis/$mtx_name.perm
+        command: "./MtxPerm/SPARSEBASE/build/metis_part_perm {mtx} $perm_path --nparts 128"
+
+      # - tag: "SPARTA_reorder"  # disabled
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p perms/SPARTA_reorder
+      #     perm_path=perms/SPARTA_reorder/$mtx_name.perm
+      #   command: "python3 MtxPerm/SPARTA/reorder.py {mtx} $perm_path --block-size 32 --tau 0.5"
+
+      - tag: "SB_amd"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_amd
+          perm_path=perms/SB_amd/$mtx_name.perm
+        command: "./MtxPerm/SPARSEBASE/build/amd_perm {mtx} $perm_path"
+
+      - tag: "SB_rabbit"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_rabbit
+          perm_path=perms/SB_rabbit/$mtx_name.perm
+        command: "./MtxPerm/SPARSEBASE/build/rabbit_perm {mtx} $perm_path"
+
+      - tag: "SB_patoh"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_patoh
+          perm_path=perms/SB_patoh/$mtx_name.perm
+        command: "./MtxPerm/SPARSEBASE/build/patoh_perm {mtx} $perm_path --nparts 128"
+
+      - tag: "SB_slashburn"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/SB_slashburn
+          perm_path=perms/SB_slashburn/$mtx_name.perm
+        command: "./MtxPerm/SPARSEBASE/build/slashburn_perm {mtx} $perm_path"
+
+      - tag: "CLUB_reorder"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/CLUB_reorder
+          perm_path=perms/CLUB_reorder/$mtx_name.perm
+        command: "python3 MtxPerm/CLUB/reorder.py {mtx} $perm_path"
+
+      # - tag: "ACCORDER_reorder"  # disabled
+      #   preprocess: |
+      #     source MtxPerm/ACCORDER/accorder_preprocess.sh
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p perms/ACCORDER_reorder
+      #     perm_path=perms/ACCORDER_reorder/$mtx_name.perm
+      #   command: "./MtxPerm/ACCORDER/build/accorder_perm {mtx} $perm_path"
+
+  - config: "gpu"
+    config_jobs:
+      - tag: "TCA_reorder"
+        preprocess: |
+          source MtxPerm/DTC-LSH/tca_preprocess.sh
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p perms/TCA_reorder
+          perm_path=perms/TCA_reorder/$mtx_name.perm
+        command: "python3 MtxPerm/DTC-LSH/reorder.py {mtx} $perm_path"

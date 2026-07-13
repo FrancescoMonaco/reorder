@@ -1,0 +1,46 @@
+operators/ASpT/
+
+# Claude Code local settings
+.claude/
+CLAUDE.md
+
+# Generated plots
+plots/*
+!plots/spy_plots/
+!plots/spy_quick/
+plots_random/
+plots_[0-9][0-9]_[0-9][0-9]/
+*.pyc
+__pycache__/
+test/groot_test.perm
+
+# External operator libraries
+operators/DTC-SpMM/
+operators/FlashSparse/
+operators/smat/
+operators/cusparse_bsr_spmm
+operators/AccSpMM/
+
+# External dependencies
+ccutils
+
+# Data and results
+datasets/
+*.log
+*.out
+/results_smat.csv
+operators/results_smat.csv
+/DTCSpMM_exe_time_and_throughput.csv
+PaToH.log.*
+knn_cache/
+test_runs/
+.parse_cache.pkl
+
+# Experiment outputs
+SbatchMan/archive/
+SbatchMan/experiments/
+
+# Permutation data
+perms/
+perms_random/
+/plots_random

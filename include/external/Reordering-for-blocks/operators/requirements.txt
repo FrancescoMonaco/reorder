@@ -1,0 +1,16 @@
+# Core dependencies for SpMM operators
+# Install with: pip install -r requirements.txt
+
+# PyTorch (install separately with CUDA support!)
+# See: https://pytorch.org/get-started/locally/
+# Example: pip install torch --index-url https://download.pytorch.org/whl/cu118
+torch
+
+# Scientific computing
+numpy
+scipy
+
+# Matrix I/O
+# Note: ssgetpy for downloading SuiteSparse matrices (optional)
+# ssgetpy
+

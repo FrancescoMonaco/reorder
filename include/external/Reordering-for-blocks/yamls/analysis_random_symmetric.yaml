@@ -1,0 +1,24 @@
+variables:
+  mtx: 'datasets/matrices_list_filtered.txt'
+  perm:
+    - GROOT_reorder
+    - SB_degree
+    - SB_gray
+    - SB_rcm
+    - SB_metis
+    - SB_amd
+    - SB_rabbit
+    - SB_patoh
+    - SB_slashburn
+    - TCA_reorder
+    # - ACCORDER_reorder  # disabled
+
+preprocess: |
+  source ~/.venv/bin/activate
+  mtx_name=$(basename {mtx} .mtx)
+
+jobs:
+  - config: "perm"
+    config_jobs:
+      - tag: "ANALYSIS_RANDOM_SYMMETRIC"
+        command: "python3 MtxPerm/ANALYSIS/analyze.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --block-sizes 4 8 16 32 64 128"

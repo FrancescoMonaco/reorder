@@ -1,0 +1,30 @@
+# This is the base folder for storing the Matrix Market files
+path: ./datasets
+
+# This is an example subfolder/category of matrices
+small-matrices-test:
+
+  # This allows to download matrices based on their metadata
+  # Internally, these options will be passed to the `ssgetpy` package
+  suite_sparse_matrix_range:
+    min_nnzs: 10000
+    max_nnzs: 100000
+    limit: 7
+
+big-matrices-test:
+    min_nnzs: 500000
+    max_nnzs: 1000000
+    limit: 5
+
+all-matrices:
+  suite_sparse_matrix_range:
+    min_nnzs: 10000
+    max_nnzs: 1000000
+    limit: 10000
+
+large-matrices:
+  suite_sparse_matrix_range:
+    min_nnzs: 1000000     # 10^6
+    max_nnzs: 100000000   # 10^8
+    limit: 10000
+

@@ -1,0 +1,57 @@
+variables:
+  mtx: 'datasets/matrices_list_filtered.txt'
+  perm:
+    - SB_amd
+    - SB_gray
+    - SB_degree
+    - SB_metis
+    - SB_rcm
+    - SB_rabbit
+    - SB_patoh
+    - SB_slashburn
+    - GROOT_reorder
+    - TCA_reorder
+    # - ACCORDER_reorder  # disabled
+  block_size:
+    - 32
+  n_cols:
+    - 256
+
+preprocess: |
+  source ~/.venv/bin/activate
+  mtx_name=$(basename {mtx} .mtx)
+  module load CUDA/
+  module load GCC/13.3.0
+
+jobs:
+  - config: "gpu"
+    config_jobs:
+
+      - tag: "ASPT_SPMM_SYMMETRIC_RANDOM"
+        command: "python3 operators/aspt_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+
+      - tag: "CUSPARSE_SPMM_BSR_SYMMETRIC_RANDOM"
+        command: "python3 operators/cusparse_bsr_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC --n-cols {n_cols}"
+      - tag: "CUSPARSE_SPMM_CSR_SYMMETRIC_RANDOM"
+        command: "python3 operators/cusparse_csr_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+
+      - tag: "SMAT_SPMM_SYMMETRIC_RANDOM"
+        command: "python3 operators/smat_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC --n-cols {n_cols}"
+
+      - tag: "ACCSPMM_SPMM_SYMMETRIC_RANDOM"
+        command: "python3 operators/accspmm_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+
+      - tag: "DTC_SPMM_SYMMETRIC_RANDOM"
+        preprocess: |
+          source operators/dtc_preprocess.sh
+          mtx_name=$(basename {mtx} .mtx)
+        command: "python3 operators/dtc_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols} --n-iterations 1"
+
+      - tag: "FLASHSPARSE_SPMM_SYMMETRIC_RANDOM"
+        preprocess: |
+          source operators/flashsparse_preprocess.sh
+          mtx_name=$(basename {mtx} .mtx)
+        command: "python3 operators/flashsparse_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+
+      # - tag: "BLEST_BFS_SYMMETRIC_RANDOM"  # disabled
+      #   command: "python3 operators/blest_bfs.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-sources 64"

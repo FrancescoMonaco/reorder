@@ -1,0 +1,43 @@
+# SparseBase library and build artifacts
+SPARSEBASE/sparsebase/
+SPARSEBASE/sparsebase_install/
+SPARSEBASE/build/
+
+# Additional dependencies build artifacts
+SPARSEBASE/suitesparse_build/
+SPARSEBASE/amd_install/
+SPARSEBASE/metis_build/
+SPARSEBASE/metis_install/
+SPARSEBASE/rabbit_build/
+SPARSEBASE/rabbit_install/
+
+*.o
+*.a
+*.so
+*.exe
+
+# Python cache
+__pycache__/
+*.pyc
+
+SPARTA/repo/
+GROOT/repo/
+GROOT/Groot-EuroSys25/
+GROOT/kgraph/
+GROOT/kgraph_install/
+GROOT/boost_local/
+GROOT/knn_cache/
+
+# PaToH build artifacts
+SPARSEBASE/patoh_build/
+SPARSEBASE/patoh_install/
+
+# Test outputs
+SPARSEBASE/test.out
+SPARSEBASE/test_out.txt
+SPARSEBASE/test_reorder.txt
+
+# External dependencies
+SPARSEBASE/ccutils
+distributed_mmio/
+rabbitorder/

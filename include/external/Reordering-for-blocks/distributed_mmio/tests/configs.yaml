@@ -1,0 +1,7 @@
+variables:
+  ranks: [2, 4, 8, 16, 32]
+
+local:
+  scheduler: local
+  configs:
+    - name: "{ranks}_ranks"
