@@ -667,12 +667,18 @@ namespace club {
     // BSR<...> until those are filled in.
     // ------------------------------------------------------------------------
     template <typename DataT, typename intT>
-    void reorder2( CSR<DataT, intT>& A, size_t W, size_t max_iters = 4 ) {
+    void reorder2( CSR<DataT, intT>& A, size_t W, size_t max_iters = 4,
+                   std::vector<size_t>* out_perm = nullptr ) {
         const size_t W_mes = 32;
         size_t best_blocks = count_nonzero_blocks( A, W_mes, W_mes );
         LOG_INFO( "msg", "Starting 2-sided reordering", "nonzero blocks", best_blocks );
 
         CSR<DataT, intT> best = A;
+
+        // Cumulative row permutation: out_perm[i] = original row index that ends up at position i
+        std::vector<size_t> cumulative( static_cast<size_t>( A.rows ) );
+        std::iota( cumulative.begin(), cumulative.end(), 0 );
+        std::vector<size_t> best_perm = cumulative;
 
         for ( size_t iter = 0; iter < max_iters; ++iter ) {
             // --- row pass ---
@@ -680,6 +686,17 @@ namespace club {
             std::vector<size_t> P;
             mask( A, W, Ahat );
             cluster_lex( Ahat, P );
+
+            // Compose the new row permutation into the cumulative one:
+            //   cumulative_new[i] = cumulative_old[ P[i] ]
+            // because permute(A, P) moves old row P[i] to new position i.
+            {
+                std::vector<size_t> composed( static_cast<size_t>( A.rows ) );
+                for ( size_t i = 0; i < static_cast<size_t>( A.rows ); ++i )
+                    composed[i] = cumulative[P[i]];
+                cumulative.swap( composed );
+            }
+
             permute( A, P );
 
             // --- column pass, via transpose ---
@@ -697,12 +714,15 @@ namespace club {
             if ( blocks < best_blocks ) {
                 best_blocks = blocks;
                 best = A;
+                best_perm = cumulative;
             } else {
                 break;
             }
         }
 
         A = std::move( best );
+        if ( out_perm )
+            *out_perm = std::move( best_perm );
         LOG_INFO( "msg", "2-sided reordering done", "nonzero blocks", best_blocks );
     }
 } // namespace club
