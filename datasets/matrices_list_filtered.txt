@@ -1,0 +1,6 @@
+/home/francescopio.monaco/reorder/datasets/bcspwr10/bcspwr10.mtx
+/home/francescopio.monaco/reorder/datasets/bcsstk08/bcsstk08.mtx
+/home/francescopio.monaco/reorder/datasets/bcsstk09/bcsstk09.mtx
+/home/francescopio.monaco/reorder/datasets/bcsstk11/bcsstk11.mtx
+/home/francescopio.monaco/reorder/datasets/bcsstk12/bcsstk12.mtx
+/home/francescopio.monaco/reorder/datasets/bcsstk13/bcsstk13.mtx

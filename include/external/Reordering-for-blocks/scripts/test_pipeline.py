@@ -132,6 +132,7 @@ def perm_command(algo: str, mtx: str, perm_path: str) -> str:
         "GROOT_reorder":   f"python3 MtxPerm/GROOT/reorder.py {mtx} {perm_path}",
         "random1D":        f"python3 MtxPerm/RANDOM/GB_random_permutation_1d.py {mtx} {perm_path}",
         "random2D":        f"python3 MtxPerm/RANDOM/GB_random_permutation_2d.py {mtx} {perm_path}",
+        "CLUB_reorder":    f"python3 MtxPerm/CLUB/reorder.py {mtx} {perm_path}",
         "SB_degree":       f"./MtxPerm/SPARSEBASE/build/degree_perm {mtx} {perm_path}",
         "SB_gray":         f"./MtxPerm/SPARSEBASE/build/gray_perm {mtx} {perm_path}",
         "SB_rcm":          f"./MtxPerm/SPARSEBASE/build/rcm_perm {mtx} {perm_path}",

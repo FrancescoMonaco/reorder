@@ -72,3 +72,8 @@ Makefile*
 *.mtx
 *tar.gz
 *.gz
+
+*.perm
+SbatchMan/
+boost_1_89_0/
+boost_1_79_0/

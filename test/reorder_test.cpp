@@ -8,14 +8,18 @@ int main() {
     // Read the matrix from file
     CSR<float, size_t> mat;
     std::vector<std::string> test_matrices = {
+        "datasets/bcspwr10/bcspwr10.mtx",
+        "datasets/bcsstk08/bcsstk08.mtx",
+        "datasets/bcsstk10/bcsstk10.mtx",
+        "datasets/bcsstk13/bcsstk13.mtx",
         // "matrices/1138_bus/1138_bus.mtx",
         // "matrices/ash292/ash292.mtx",
         // "matrices/lp_stocfor3/lp_stocfor3.mtx",
         // "matrices/thermal2/thermal2.mtx",
         // "matrices/webbase-2001/webbase-2001.mtx",
-        "matrices/indochina-2004/indochina-2004.mtx",
-        "matrices/kmer_V2a/kmer_V2a.mtx",
-        "matrices/PR02R/PR02R.mtx",
+        // "matrices/indochina-2004/indochina-2004.mtx",
+        // "matrices/kmer_V2a/kmer_V2a.mtx",
+        // "matrices/PR02R/PR02R.mtx",
     };
     for ( const auto& path : test_matrices ) {
         std::ifstream infile( path );

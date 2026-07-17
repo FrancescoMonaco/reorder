@@ -12,6 +12,7 @@ variables:
     - SB_slashburn
     - GROOT_reorder
     - TCA_reorder
+    - CLUB_reorder
     # - ACCORDER_reorder  # disabled
   block_size:
     - 32
@@ -29,35 +30,35 @@ jobs:
     config_jobs:
 
       - tag: "ASPT_SPMM_SYMMETRIC"
-        command: "python3 operators/aspt_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/aspt_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
 
 #      - tag: "CUSPARSE_SPMV_BSR_SYMMETRIC"
-#        command: "python3 operators/cusparse_bsr_spmv.py {mtx} --perm perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC"
+#        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmv.py {mtx} --perm perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC"
 #      - tag: "CUSPARSE_SPMV_CSR_SYMMETRIC"
-#        command: "python3 operators/cusparse_csr_spmv.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC"
+#        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmv.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC"
 
       - tag: "CUSPARSE_SPMM_BSR_SYMMETRIC"
-        command: "python3 operators/cusparse_bsr_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC --n-cols {n_cols}"
       - tag: "CUSPARSE_SPMM_CSR_SYMMETRIC"
-        command: "python3 operators/cusparse_csr_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
 
       - tag: "SMAT_SPMM_SYMMETRIC"
-        command: "python3 operators/smat_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/smat_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type SYMMETRIC --n-cols {n_cols}"
 
       - tag: "ACCSPMM_SPMM_SYMMETRIC"
-        command: "python3 operators/accspmm_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/accspmm_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
 
       - tag: "DTC_SPMM_SYMMETRIC"
         preprocess: |
-          source operators/dtc_preprocess.sh
+          source include/external/Reordering-for-blocks/operators/dtc_preprocess.sh
           mtx_name=$(basename {mtx} .mtx)
-        command: "python3 operators/dtc_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols} --n-iterations 1"
+        command: "python3 include/external/Reordering-for-blocks/operators/dtc_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols} --n-iterations 1"
 
       - tag: "FLASHSPARSE_SPMM_SYMMETRIC"
         preprocess: |
-          source operators/flashsparse_preprocess.sh
+          source include/external/Reordering-for-blocks/operators/flashsparse_preprocess.sh
           mtx_name=$(basename {mtx} .mtx)
-        command: "python3 operators/flashsparse_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/flashsparse_spmm.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-cols {n_cols}"
 
       # - tag: "BLEST_BFS_SYMMETRIC"  # disabled
-      #   command: "python3 operators/blest_bfs.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-sources 64"
+      #   command: "python3 include/external/Reordering-for-blocks/operators/blest_bfs.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --n-sources 64"

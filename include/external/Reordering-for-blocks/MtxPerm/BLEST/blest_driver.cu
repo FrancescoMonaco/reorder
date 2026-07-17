@@ -124,8 +124,7 @@ int main(int argc, char** argv)
         }
 
         // Construct BVSS
-        std::ofstream devnull("/dev/null");
-        BVSS* bvss = new BVSS(sliceSize, noMasks, devnull);
+        BVSS* bvss = new BVSS(sliceSize, noMasks);
         bvss->constructFromCSCMatrix(csc);
 
         double endPreprocess = omp_get_wtime();
@@ -164,7 +163,6 @@ int main(int argc, char** argv)
         }
         delete kernel;
         delete bvss;
-        devnull.close();
         delete[] inversePermutation;
         delete csc;
     }
