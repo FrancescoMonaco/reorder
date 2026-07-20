@@ -20,10 +20,9 @@ variables:
     - 256
 
 preprocess: |
-  source ~/.venv/bin/activate
+  micromamba activate reorder_env
   mtx_name=$(basename {mtx} .mtx)
-  module load CUDA/
-  module load GCC/13.3.0
+
 
 jobs:
   - config: "gpu"

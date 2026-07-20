@@ -1,16 +1,7 @@
 #!/bin/bash
 #
 # Install script for DTC-LSH (TCA reordering from DTC-SpMM, ASPLOS'24)
-#
-# Creates a dedicated conda environment "DTC-LSH" with all dependencies:
-#   - cugraph, cudf (GPU graph/dataframe libraries)
-#   - datasketch (MinHash/LSH)
-#   - cupy (GPU arrays)
-#   - libMHCUDA / minhashcuda (GPU-accelerated MinHash)
-#   - scipy, numpy (matrix I/O)
-#
-# Based on DTC-SpMM README section 7: "Use TCA-reordering"
-# https://github.com/HPMLL/DTC-SpMM_ASPLOS24
+# Modified to use micromamba with an isolated compiler toolchain.
 #
 # Usage:
 #   ./install.sh              # Standard install
@@ -36,40 +27,40 @@ for arg in "$@"; do
 done
 
 echo "=========================================="
-echo "DTC-LSH (TCA Reordering) Installation"
+echo "DTC-LSH (TCA Reordering) Micromamba Install"
 echo "=========================================="
 
-# Initialize conda
-if [ -f /usr/lib/python3.9/site-packages/conda/shell/etc/profile.d/conda.sh ]; then
-    source /usr/lib/python3.9/site-packages/conda/shell/etc/profile.d/conda.sh
-elif [ -f "$(conda info --base 2>/dev/null)/etc/profile.d/conda.sh" ]; then
-    source "$(conda info --base)/etc/profile.d/conda.sh"
+# Initialize micromamba for this bash subshell session
+if command -v micromamba &> /dev/null; then
+    eval "$(micromamba shell hook --shell bash)"
+elif [ -d "$HOME/micromamba" ]; then
+    eval "$($HOME/micromamba/bin/micromamba shell hook --shell bash)"
+else
+    echo "ERROR: micromamba binary could not be found."
+    exit 1
 fi
 
-# Load modules
-module load CUDA/ 2>/dev/null || true
-module load GCC/13.3.0 2>/dev/null || true
-
 # ============================================
-# Step 1: Create conda environment
+# Step 1: Create micromamba environment
 # ============================================
 echo ""
-echo "[1/3] Setting up conda environment '${ENV_NAME}'..."
+echo "[1/3] Setting up micromamba environment '${ENV_NAME}'..."
 
 if [ "$CLEAN_BUILD" = true ]; then
     echo "Removing existing environment..."
-    conda env remove -n "${ENV_NAME}" -y 2>/dev/null || true
+    micromamba env remove -n "${ENV_NAME}" -y 2>/dev/null || true
     rm -rf "${MINHASH_DIR}"
 fi
 
-if conda env list | grep -q "^${ENV_NAME} "; then
+if micromamba env list | grep -q "^${ENV_NAME} "; then
     echo "Environment '${ENV_NAME}' already exists, activating..."
 else
-    echo "Creating environment '${ENV_NAME}' (Python 3.11)..."
-    conda create -n "${ENV_NAME}" python=3.11 -y
+    echo "Creating environment '${ENV_NAME}' (Python 3.11) with isolated build tools..."
+    # We include cmake, make, and gxx_linux-64 so step 3 bypasses broken cluster modules
+    micromamba create -n "${ENV_NAME}" python=3.11 pip cmake make gxx_linux-64 -c conda-forge -y
 fi
 
-conda activate "${ENV_NAME}"
+micromamba activate "${ENV_NAME}"
 echo "Activated: ${ENV_NAME} ($(python3 --version))"
 
 # ============================================
@@ -106,13 +97,19 @@ else
         git clone https://github.com/src-d/minhashcuda.git "${MINHASH_DIR}"
     fi
     cd "${MINHASH_DIR}"
+    
+    # Clean any old compilation debris
+    rm -rf CMakeCache.txt CMakeFiles/
+    
     NUMPY_INC=$(python3 -c "import numpy; print(numpy.get_include())")
+    
+    # This will naturally use the micromamba-provided cmake and compilers
     cmake -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_CXX_FLAGS="-I${NUMPY_INC}" \
           .
     make -j4
-    # setup.py install fails due to missing libpython3.X.a in conda envs.
-    # Manually install the built .so into site-packages instead.
+    
+    # Manual installation bypassing broken libpython linking expectations
     SITE_PKGS=$(python3 -c "import site; print(site.getsitepackages()[0])")
     cp libMHCUDA.so "${SITE_PKGS}/"
     cd "${SCRIPT_DIR}"
@@ -142,10 +139,10 @@ if [ "$PASS" = true ]; then
 else
     echo "=========================================="
     echo "WARNING: Some imports failed (see above)."
-    echo "libMHCUDA may require a GPU node to build."
+    echo "libMHCUDA requires a GPU node to build/verify."
     echo "=========================================="
 fi
 echo ""
 echo "Usage:"
-echo "  conda activate ${ENV_NAME}"
+echo "  micromamba activate ${ENV_NAME}"
 echo "  python3 MtxPerm/DTC-LSH/reorder.py <matrix.mtx> <output.perm> [--thres 16]"

@@ -7,9 +7,9 @@ SRC_DIR="$SCRIPT_DIR/src"
 BUILD_DIR="$SCRIPT_DIR/build"
 
 # Load Boost and numactl modules for headers/libraries
-module purge 2>/dev/null || true
-module load Boost/1.82.0-GCC-12.3.0
-module load numactl/2.0.16-GCCcore-12.3.0
+# module purge 2>/dev/null || true
+# module load Boost/1.82.0-GCC-12.3.0
+# module load numactl/2.0.16-GCCcore-12.3.0
 
 # Use system compiler (EasyBuild GCC/binutils may crash on some nodes)
 export CC=/usr/bin/gcc

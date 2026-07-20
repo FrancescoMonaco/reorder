@@ -24,6 +24,7 @@
 #include <vector>
 
 using namespace sparsebase;
+using namespace sparsebase::metis;
 using namespace reorder_utils;
 
 int main(int argc, char* argv[]) {
@@ -70,14 +71,14 @@ int main(int argc, char* argv[]) {
         std::cerr << "[METIS-Part] Number of partitions: " << nparts << "\n";
         
         // Parse objective type
-        int objtype = metis::METIS_OBJTYPE_CUT;  // default
+        int objtype = METIS_OBJTYPE_CUT;  // default
         std::string objtype_str = get_flag_value(argc, argv, "--objtype");
         if (objtype_str == "vol" || objtype_str == "VOL") {
-            objtype = metis::METIS_OBJTYPE_VOL;
+            objtype = METIS_OBJTYPE_VOL;
         } else if (!objtype_str.empty() && objtype_str != "cut" && objtype_str != "CUT") {
             std::cerr << "[METIS-Part] Warning: unknown objtype '" << objtype_str << "', using 'cut'\n";
         }
-        std::cerr << "[METIS-Part] Objective: " << (objtype == metis::METIS_OBJTYPE_VOL ? "volume" : "cut") << "\n";
+        std::cerr << "[METIS-Part] Objective: " << (objtype == METIS_OBJTYPE_VOL ? "volume" : "cut") << "\n";
         
         context::CPUContext cpu_context;
         std::cerr << "[METIS-Part] Computing partitioning...\n";
@@ -98,7 +99,7 @@ int main(int argc, char* argv[]) {
         // Create (vertex_id, partition_id) pairs
         std::vector<std::pair<int, int>> vertex_partition(n);
         for (int i = 0; i < n; i++) {
-            vertex_partition[i] = {i, partition_result[i]};
+            vertex_partition[i] = std::make_pair(i, partition_result[i]);
         }
         
         // Sort by partition ID (stable sort to maintain relative order within partitions)

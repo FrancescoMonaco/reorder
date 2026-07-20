@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Install script for Groot (Graph-Centric Row Reordering) - Python Version
-# Clones the official Groot-EuroSys25 repository and creates a conda environment.
+# Modified to use micromamba with fully isolated binary packages.
 #
 # Reference:
 #     Chen et al., "Groot: Graph-Centric Row Reordering with Tree for
@@ -9,11 +9,8 @@
 #
 # Repository: https://github.com/yuang-chen/Groot-EuroSys25
 #
-# Requirements:
-#   - Conda (miniconda/anaconda)
-#
 # Usage:
-#   ./install.sh           # Create/update conda environment
+#   ./install.sh           # Create/update micromamba environment
 #   ./install.sh --clean   # Remove and recreate environment
 #
 
@@ -33,21 +30,19 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 echo "=========================================="
-echo "Groot Installation Script (Python Version)"
+echo "Groot Installation Script (Micromamba Version)"
 echo "=========================================="
 echo "Target directory: ${REPO_DIR}"
-echo "Conda environment: ${ENV_NAME}"
+echo "Micromamba environment: ${ENV_NAME}"
 echo ""
 
-# Initialize conda
-if [ -f /usr/lib/python3.9/site-packages/conda/shell/etc/profile.d/conda.sh ]; then
-    source /usr/lib/python3.9/site-packages/conda/shell/etc/profile.d/conda.sh
-elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/miniconda3/etc/profile.d/conda.sh"
-elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/anaconda3/etc/profile.d/conda.sh"
+# Initialize micromamba for this bash subshell session
+if command -v micromamba &> /dev/null; then
+    eval "$(micromamba shell hook --shell bash)"
+elif [ -d "$HOME/micromamba" ]; then
+    eval "$($HOME/micromamba/bin/micromamba shell hook --shell bash)"
 else
-    echo "ERROR: Could not find conda. Please install miniconda/anaconda."
+    echo "ERROR: micromamba binary could not be found."
     exit 1
 fi
 
@@ -61,25 +56,25 @@ else
     echo "Repository already cloned at $REPO_DIR"
 fi
 
-# Step 2: Create/update conda environment
+# Step 2: Create/update micromamba environment
 echo ""
-echo "[2/3] Setting up conda environment..."
+echo "[2/3] Setting up micromamba environment..."
 
 if [ "$CLEAN" = true ]; then
     echo "Removing existing environment..."
-    conda env remove -n "$ENV_NAME" -y 2>/dev/null || true
+    micromamba env remove -n "$ENV_NAME" -y 2>/dev/null || true
 fi
 
 # Check if environment exists
-if conda env list | grep -q "^${ENV_NAME} "; then
-    echo "Environment '$ENV_NAME' already exists. Updating..."
-    conda activate "$ENV_NAME"
-    pip install --upgrade pynndescent scipy numpy
+if micromamba env list | grep -q "^${ENV_NAME} "; then
+    echo "Environment '$ENV_NAME' already exists. Updating packages..."
+    micromamba activate "$ENV_NAME"
+    micromamba install -c conda-forge pynndescent scipy numpy -y
 else
-    echo "Creating new environment '$ENV_NAME'..."
-    conda create -n "$ENV_NAME" python=3.11 -y
-    conda activate "$ENV_NAME"
-    pip install pynndescent scipy numpy
+    echo "Creating new environment '$ENV_NAME' (Python 3.11)..."
+    # Pulling heavy math/graph libraries from conda-forge prevents pip local-compilation crashes
+    micromamba create -n "$ENV_NAME" python=3.11 pynndescent scipy numpy -c conda-forge -y
+    micromamba activate "$ENV_NAME"
 fi
 
 # Step 3: Verify installation
@@ -87,7 +82,7 @@ echo ""
 echo "[3/3] Verifying installation..."
 
 cd "$SCRIPT_DIR"
-python -c "
+python3 -c "
 import sys
 sys.path.insert(0, '$REPO_DIR')
 from pynndescent import NNDescent
@@ -105,7 +100,7 @@ echo "Groot Installation Complete!"
 echo "=========================================="
 echo ""
 echo "To activate the environment:"
-echo "  conda activate $ENV_NAME"
+echo "  micromamba activate $ENV_NAME"
 echo ""
 echo "Usage:"
 echo "  python3 MtxPerm/GROOT/reorder.py <input.mtx> <output.perm>"

@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find OpenMP
 find_package(OpenMP REQUIRED)
-
 # Find SparseBase
 set(SPARSEBASE_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sparsebase_install")
 list(APPEND CMAKE_PREFIX_PATH "${SPARSEBASE_INSTALL_DIR}")
@@ -49,6 +48,14 @@ int main() {
     return 0;
 }" HAVE_METIS_REORDER)
 
+# Test for METIS partition
+check_cxx_source_compiles("
+#include <sparsebase/partition/metis_partition.h>
+int main() {
+    sparsebase::partition::MetisPartitionParams params;
+    return 0;
+}" HAVE_METIS_PARTITION)
+
 # Test for Rabbit
 check_cxx_source_compiles("
 #include <sparsebase/reorder/rabbit_reorder.h>
@@ -85,6 +92,9 @@ foreach(SOURCE_FILE ${REORDERING_SOURCES})
         set(SKIP_TOOL TRUE)
     elseif(TOOL_NAME STREQUAL "metis_perm" AND NOT HAVE_METIS_REORDER)
         message(STATUS "  Skipping: ${TOOL_NAME} (METIS reorder not available in SparseBase)")
+        set(SKIP_TOOL TRUE)
+    elseif(TOOL_NAME STREQUAL "metis_part_perm" AND NOT HAVE_METIS_PARTITION)
+        message(STATUS "  Skipping: ${TOOL_NAME} (METIS partition not available in SparseBase)")
         set(SKIP_TOOL TRUE)
     elseif(TOOL_NAME STREQUAL "rabbit_perm" AND NOT HAVE_RABBIT_REORDER)
         message(STATUS "  Skipping: ${TOOL_NAME} (Rabbit reorder not available in SparseBase)")

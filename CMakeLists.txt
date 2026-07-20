@@ -41,8 +41,12 @@ target_link_libraries(reorder PRIVATE icecream-cpp::icecream-cpp)
 # This cmake code is adapted from
 # - https://nanobind.readthedocs.io/en/latest/building.html
 # - https://nanobind.readthedocs.io/en/latest/packaging.html
+# Explicitly find the Conda Python interpreter first if active
+if(DEFINED ENV{CONDA_PREFIX})
+  set(Python_EXECUTABLE "$ENV{CONDA_PREFIX}/bin/python")
+endif()
 
-find_package(Python 3.14
+find_package(Python 3.12
   REQUIRED COMPONENTS Interpreter Development.Module
   OPTIONAL_COMPONENTS Development.SABIModule)
 
@@ -54,6 +58,14 @@ find_package(nanobind CONFIG REQUIRED)
 
 nanobind_add_module(_reorder_impl NOMINSIZE NB_STATIC python/wrapper.cpp)
 target_link_libraries(_reorder_impl PRIVATE)
+
+# --- NEW: AUTOMATICALLY COPY TO THE PYTHON SCRIPT FOLDER ---
+# This forces the compiled .so/.pyd to be created directly in your source tree (e.g. inside CLUB)
+# so python reorder.py can immediately import it without any copying.
+set_target_properties(_reorder_impl PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/CLUB"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/CLUB" # For Windows DLLs/.pyd
+)
 
 install(TARGETS _reorder_impl LIBRARY DESTINATION reorder)
 
