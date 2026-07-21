@@ -5,13 +5,13 @@
 set -e
 
 # Load required modules
-module purge
-module load CUDA/12.1.1
+# module purge
+# module load CUDA/12.1.1
 # Note: Using system GCC 11.5.0, not module GCC (which causes assembler issues)
 
 # Activate conda environment
 source /usr/lib/python3.9/site-packages/conda/shell/etc/profile.d/conda.sh
-conda activate FlashSparse
+#micromamba activate FlashSparse
 
 # Set CUDA architecture (A100 = 8.0)
 export TORCH_CUDA_ARCH_LIST="8.0"

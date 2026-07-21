@@ -5,6 +5,7 @@ Analyze sparse matrix properties: Block structure, Bandwidth, Locality.
 
 import sys
 import json
+import csv
 import argparse
 import time
 from pathlib import Path
@@ -17,9 +18,50 @@ from utils import load_and_permute_matrix, apply_permutation
 # Import local analysis utils
 from analysis_utils import analyze_block_structure, analyze_bandwidth, analyze_locality, analyze_access_distances
 
+
+def _flatten_results(results):
+    """
+    Flatten the nested results dict into a single-level dict suitable for CSV output.
+    This mirrors the flattening logic in parse_results.py.
+    """
+    flat = {}
+
+    # Top-level fields
+    for key in ['time_loading_ms', 'matrix', 'rows', 'cols', 'nnz', 'density',
+                'permutation', 'perm_type', 'base_permutation', 'base_perm_type',
+                'time_block_analysis_ms', 'time_bandwidth_analysis_ms',
+                'time_locality_analysis_ms', 'time_access_distances_ms',
+                'total_analysis_time_ms']:
+        flat[key] = results.get(key)
+
+    # Flatten bandwidth
+    for k, v in results.get('bandwidth', {}).items():
+        flat[k] = v
+
+    # Flatten locality (with prefix to avoid key collisions)
+    for k, v in results.get('locality', {}).items():
+        flat[f"locality_{k}"] = v
+
+    # Flatten access distances (with prefix to avoid key collisions)
+    for k, v in results.get('access_distances', {}).items():
+        flat[f"access_dist_{k}"] = v
+
+    # Flatten block analysis
+    for b in results.get('block_analysis', []):
+        bs = b.get('block_size')
+        if bs:
+            flat[f'block_density_{bs}'] = b.get('block_density')
+            flat[f'nonzero_blocks_{bs}'] = b.get('nonzero_blocks')
+            flat[f'total_blocks_{bs}'] = b.get('total_blocks')
+            flat[f'max_blocks_per_row_{bs}'] = b.get('max_blocks_per_row')
+            flat[f'avg_blocks_per_row_{bs}'] = b.get('avg_blocks_per_row')
+
+    return flat
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Analyze sparse matrix properties'
+        description="Analyze sparse matrix properties"
     )
     parser.add_argument('matrix', help='Path to Matrix Market file')
     parser.add_argument('--perm', help='Path to permutation file (optional)')
@@ -42,14 +84,14 @@ def main():
         default='SYMMETRIC',
         help='Type of base permutation (default: SYMMETRIC)'
     )
-    parser.add_argument('--output', '-o', help='Output JSON file (default: stdout)')
+    parser.add_argument('--output', '-o', help='Output CSV file (default: stdout)')
     parser.add_argument('--pretty', action='store_true', help='Pretty-print JSON output')
-    
+
     args = parser.parse_args()
-    
+
     try:
         t0 = time.perf_counter()
-        
+
         # Load matrix (optionally with base permutation applied first)
         print(f"Loading matrix: {args.matrix}...", file=sys.stderr)
         A_scipy = load_and_permute_matrix(
@@ -58,7 +100,7 @@ def main():
         )
         m, n = A_scipy.shape
         nnz = A_scipy.nnz
-        
+
         loading_ms = (time.perf_counter() - t0) * 1000
 
         # Initialize results
@@ -74,19 +116,19 @@ def main():
             "base_permutation": args.base_perm if args.base_perm else "None",
             "base_perm_type": args.base_perm_type
         }
-        
+
         # 1. Block Structure Analysis
         print("Analyzing block structure...", file=sys.stderr)
         t_block = time.perf_counter()
         results["block_analysis"] = analyze_block_structure(A_scipy, args.block_sizes)
         results["time_block_analysis_ms"] = (time.perf_counter() - t_block) * 1000
-        
+
         # 2. Bandwidth Analysis
         print("Analyzing bandwidth...", file=sys.stderr)
         t_bw = time.perf_counter()
         results["bandwidth"] = analyze_bandwidth(A_scipy)
         results["time_bandwidth_analysis_ms"] = (time.perf_counter() - t_bw) * 1000
-        
+
         # 3. Locality Analysis
         print("Analyzing locality...", file=sys.stderr)
         t_loc = time.perf_counter()
@@ -101,25 +143,34 @@ def main():
 
         total_ms = (time.perf_counter() - t0) * 1000
         results["total_analysis_time_ms"] = total_ms
-        
-        # Output results
+
+        # Output results: stdout gets JSON, file gets flattened CSV
         indent = 2 if args.pretty else None
         json_output = json.dumps(results, indent=indent)
-        
+
         if args.output:
-            with open(args.output, 'w') as f:
-                f.write(json_output)
+            # Flatten nested results into a single-level dict for CSV output
+            flat = _flatten_results(results)
+            output_path = Path(args.output)
+            file_exists = output_path.exists() and output_path.stat().st_size > 0
+
+            with open(args.output, 'a+', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=flat.keys())
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerow(flat)
             print(f"Results written to {args.output}", file=sys.stderr)
         else:
             print(json_output)
-            
+
         return 0
-        
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc(file=sys.stderr)
         return 1
+
 
 if __name__ == '__main__':
     sys.exit(main())

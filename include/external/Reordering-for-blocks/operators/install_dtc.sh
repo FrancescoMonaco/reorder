@@ -80,7 +80,7 @@ fi
 # and for general compilation consistency.
 echo "Loading GCC and CUDA modules..."
 # If on an EasyBuild cluster, GCCcore/binutils are often needed for consistency
-module load GCCcore/13.2.0 2>/dev/null || module load gcc/13.2.0 2>/dev/null || module load GCCcore/12.3.0 2>/dev/null || module load gcc/12.1.0 2>/dev/null || true
+# module load GCCcore/13.2.0 2>/dev/null || module load gcc/13.2.0 2>/dev/null || module load GCCcore/12.3.0 2>/dev/null || module load gcc/12.1.0 2>/dev/null || true
 
 # Try to load CUDA module on clusters if nvcc is missing
 if ! command -v nvcc &> /dev/null; then

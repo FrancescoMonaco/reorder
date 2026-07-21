@@ -91,7 +91,7 @@ cd "${ASPT_DIR}/ASpT_SpMM_GPU"
 
 # Define compilation flags using detected architecture
 ARCH_FLAGS="-gencode arch=compute_${GPU_ARCH},code=sm_${GPU_ARCH}"
-NVCC_FLAGS="-std=c++11 -O3 ${ARCH_FLAGS} --use_fast_math -Xptxas -v,-dlcm=ca"
+NVCC_FLAGS="-std=c++17 -O3 ${ARCH_FLAGS} --use_fast_math -Xptxas -v,-dlcm=ca"
 
 echo "Compiling sspmm_32 (Single Precision) for sm_${GPU_ARCH}..."
 nvcc ${NVCC_FLAGS} sspmm_32.cu -o sspmm_32
