@@ -33,6 +33,7 @@ PERM_ALGORITHMS = [
     "SB_rabbit",
     "SB_patoh",
     "SB_slashburn",
+    "CLUB_reorder",
     "SPARTA_reorder",
     "ACCORDER_reorder",
     "TCA_reorder",
@@ -142,6 +143,7 @@ def perm_command(algo: str, mtx: str, perm_path: str) -> str:
         "SB_patoh":        f"./MtxPerm/SPARSEBASE/build/patoh_perm {mtx} {perm_path} --nparts 128",
         "SB_slashburn":    f"./MtxPerm/SPARSEBASE/build/slashburn_perm {mtx} {perm_path}",
         "SPARTA_reorder":  f"python3 MtxPerm/SPARTA/reorder.py {mtx} {perm_path} --block-size 32 --tau 0.5",
+        "CLUB_reorder":    f"python3 MtxPerm/CLUB/reorder.py {mtx} {perm_path}",
         "ACCORDER_reorder": f"./MtxPerm/ACCORDER/build/accorder_perm {mtx} {perm_path}",
         "TCA_reorder":     f"python3 MtxPerm/DTC-LSH/reorder.py {mtx} {perm_path}",
     }

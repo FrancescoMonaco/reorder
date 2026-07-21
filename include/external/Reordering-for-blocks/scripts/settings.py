@@ -7,11 +7,19 @@ Shared settings and display-name dictionaries for plots and tables."""
 
 # Colorblind-friendly palette for categorical data (Tol's muted scheme)
 PALETTE = [
-    '#332288', '#88CCEE', '#44AA99', '#117733',
-    '#999933', '#DDCC77', '#CC6677', '#882255',
-    '#AA4499', '#DDDDDD', '#4477AA', '#000000',
+    '#30123B', # Blu Notte
+    '#4361EE', # Blu Elettrico
+    '#28BBEC', # Turchese
+    '#1AE4B6', # Menta Chiaro
+    '#62FC6B', # Verde Brillante
+    '#AAF334', # Verde Lime
+    '#E3CA24', # Giallo Oro
+    '#FE912E', # Arancione
+    '#F24716', # Rosso Arancio
+    '#C71804', # Rosso Fuoco
+    '#910502', # Amaranto
+    '#000000'  # Nero (L'ultimo elemento richiesto)
 ]
-
 # =============================================================================
 # Metric Configuration – single source of truth
 # =============================================================================
@@ -287,8 +295,9 @@ PERMS = {
     'SB_patoh':        {'display': 'PaToH',    'color': PALETTE[6]},
     'SB_slashburn':    {'display': 'SlashBurn', 'color': PALETTE[7]},
     'SPARTA_reorder':  {'display': 'SPARTA',   'color': PALETTE[8]},
-    'TCA_reorder':     {'display': 'DTC-LSH',  'color': PALETTE[9]},
-    'SB_degree':       {'display': 'Degree',    'color': PALETTE[10]},
+    'CLUB_reorder':    {'display': 'CLUB',     'color': PALETTE[9]},
+    'TCA_reorder':     {'display': 'DTC-LSH',  'color': PALETTE[10]},
+    'SB_degree':       {'display': 'Degree',    'color': PALETTE[11]},
     'random1D':        {'display': 'Random',   'color': '#000000'},
 }
 

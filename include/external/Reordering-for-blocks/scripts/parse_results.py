@@ -37,7 +37,7 @@ SPARTA_TIMER_PATTERN = re.compile(r"^timer:\s+([0-9.eE+\-]+)", re.MULTILINE)
 PERM_TAGS = {
     'SB_amd', 'SB_degree', 'SB_gray', 'SB_rcm', 'SB_metis',
     'SB_rabbit', 'SB_patoh', 'SB_slashburn',
-    'GROOT_reorder', 'SPARTA_reorder', 'TCA_reorder', 'random1D', 'random2D',
+    'GROOT_reorder', 'SPARTA_reorder', 'TCA_reorder', 'random1D', 'random2D', "CLUB_reorder"
 }
 
 # Random-pipeline perm tags: "<algo>_RANDOM" (from perms_random.yaml)

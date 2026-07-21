@@ -11,7 +11,7 @@ from sbatchman import jobs_list
 PERM_TAGS = [
     'SB_amd', 'SB_degree', 'SB_gray', 'SB_rcm', 'SB_metis',
     'SB_rabbit', 'SB_patoh', 'SB_slashburn',
-    'GROOT_reorder', 'SPARTA_reorder', 'TCA_reorder', 'random1D', 'random2D',
+    'GROOT_reorder', 'SPARTA_reorder', 'TCA_reorder', 'CLUB_reorder', 'random1D', 'random2D',
 ]
 
 RANDOM_PERM_TAGS = [f'{t}_RANDOM' for t in PERM_TAGS if t not in ('random1D', 'random2D')]
