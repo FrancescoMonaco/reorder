@@ -23,4 +23,4 @@ jobs:
   - config: "perm"
     config_jobs:
       - tag: "ANALYSIS_SYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --block-sizes 4 8 16 32 64 128 -o include/external/Reordering-for-blocks/results/results_analysis.csv"
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --block-sizes 4 8 16 32 64 128"

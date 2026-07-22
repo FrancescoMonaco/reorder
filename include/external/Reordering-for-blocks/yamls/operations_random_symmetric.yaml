@@ -11,6 +11,7 @@ variables:
     - SB_slashburn
     - GROOT_reorder
     - TCA_reorder
+    - CLUB_reorder
     # - ACCORDER_reorder  # disabled
   block_size:
     - 32

@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import plot_utils as pu
+from multiprocessing import cpu_count
 from settings import get_perm_display, KERNEL_NAMES, GROUPED_SCATTER_EXCLUDE, PERMS, ALL_METRICS, BLOCK_SIZES, get_metric_display, get_metric_color, get_metric_hatch
 from correlation_table import (compute_imp_correlations,
                                _enabled_improvement_metrics,
@@ -90,7 +91,7 @@ def parse_args():
 
     # Parallelism
     parser.add_argument(
-        "-j", "--jobs", type=int, default=None,
+        "-j", "--jobs", type=int, default=min(8, cpu_count()),
         help="Number of parallel workers for plot generation (default: min(cpu_count, 8), 1=sequential)",
     )
 
