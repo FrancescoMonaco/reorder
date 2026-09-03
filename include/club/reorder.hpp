@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -725,4 +726,339 @@ namespace club {
             *out_perm = std::move( best_perm );
         LOG_INFO( "msg", "2-sided reordering done", "nonzero blocks", best_blocks );
     }
+
+template <typename DataT = float, typename intT = int>
+void mask_multilevel( CSR<DataT, intT>& A, const std::vector<size_t>& Ws, std::vector<size_t>& P,
+                       CSR<size_t, size_t>* Ahat_out = nullptr ) {
+    expect( !Ws.empty() );
+    std::vector<CSR<size_t, size_t>> levels( Ws.size() );
+    for ( size_t l = 0; l < Ws.size(); ++l )
+        mask( A, Ws[l], levels[l] );
+ 
+    CSR<size_t, size_t> Ahat;
+    Ahat.rows = levels[0].rows;
+    std::vector<size_t> offset( Ws.size(), 0 );
+    size_t running = 0;
+    for ( size_t l = 0; l < Ws.size(); ++l ) {
+        offset[l] = running;
+        running += static_cast<size_t>( levels[l].cols );
+    }
+    Ahat.cols = running;
+ 
+    Ahat.nzcount.assign( Ahat.rows, 0 );
+    Ahat.row_ptr.assign( Ahat.rows + 1, 0 );
+    std::vector<std::vector<size_t>> local_cols( Ahat.rows );
+ 
+#pragma omp parallel for schedule( dynamic )
+    for ( size_t i = 0; i < Ahat.rows; ++i ) {
+        std::vector<size_t>& row = local_cols[i];
+        for ( size_t l = 0; l < Ws.size(); ++l ) {
+            size_t s = static_cast<size_t>( levels[l].row_ptr[i] );
+            size_t e = static_cast<size_t>( levels[l].row_ptr[i + 1] );
+            for ( size_t k = s; k < e; ++k )
+                row.push_back( static_cast<size_t>( levels[l].col_ind[k] ) + offset[l] );
+        }
+        std::sort( row.begin(), row.end() );
+        Ahat.nzcount[i] = row.size();
+    }
+    for ( size_t i = 0; i < Ahat.rows; ++i )
+        Ahat.row_ptr[i + 1] = Ahat.row_ptr[i] + Ahat.nzcount[i];
+ 
+    size_t total = Ahat.row_ptr[Ahat.rows];
+    Ahat.col_ind.resize( total );
+    Ahat.values.assign( total, 1 );
+    Ahat.pattern_only = false;
+ 
+#pragma omp parallel for schedule( static )
+    for ( size_t i = 0; i < Ahat.rows; ++i )
+        std::copy( local_cols[i].begin(), local_cols[i].end(), Ahat.col_ind.begin() + Ahat.row_ptr[i] );
+ 
+    // Cluster the multi-resolution sketch exactly as cluster_lex would cluster
+    // a single-level one -- P[i] is the original row index that ends up at
+    // position i, ready to hand straight to permute(A, P).
+    cluster_lex( Ahat, P );
+ 
+    if ( Ahat_out )
+        *Ahat_out = std::move( Ahat );
+}
+ 
+// Guarded apply: only commits the candidate permutation if it strictly
+// improves the block count relative to A's *current* ordering. A is left
+// untouched if the candidate is not an improvement -- this is what makes
+// "never worse than baseline" structural instead of hoped-for.
+template <typename MatrixType>
+bool apply_if_better( MatrixType& A, const std::vector<size_t>& P, size_t block_w, size_t block_h,
+                       size_t& before_out, size_t& after_out ) {
+    before_out = count_nonzero_blocks( A, block_w, block_h );
+    MatrixType candidate = A;
+    permute( candidate, P );
+    after_out = count_nonzero_blocks( candidate, block_w, block_h );
+    if ( after_out < before_out ) {
+        A = std::move( candidate );
+        return true;
+    }
+    return false;
+}
+
+// ------------------------------------------------------------------------
+// cluster_lex_micromacro(Ahat, P, micro_threshold, stats_out, Ahat_macro_out)
+//
+// Fixes cluster_lex's core failure mode -- rows only ever group by EXACT
+// prefix match, so a row bridging two clusters (sharing sig[a] with row A
+// and sig[b] with row B, with A and B sharing nothing directly) never pulls
+// A and B together. Lexicographic bucketing has no notion of "reachable
+// through a neighbour"; BFS-based methods (RCM) do, by construction.
+//
+// The fix is NOT to make row-level matching transitive -- that's a graph
+// problem on n nodes, exactly the cost cluster_lex exists to avoid. Instead:
+//
+//   1. MICRO phase: run the same rank-remapped radix bucketing cluster_lex
+//      already does, but stop subdividing a bucket once it's <= micro_threshold
+//      rows (or its rows run out of signature). These are the micro-clusters:
+//      groups of rows agreeing exactly on their most common shared
+//      structure. Cost: identical to cluster_lex's signature pass,
+//      O(m log l), m = nnz(Ahat), l = avg row length.
+//
+//   2. MACRO graph: treat each micro-cluster as one node. Build a bipartite
+//      incidence between micro-clusters and the windows they touch -- for
+//      each window, a list of the micro-clusters touching it. O(m) total:
+//      every micro-cluster's summary window list is visited once, and no
+//      cluster-cluster pair is ever materialised directly (avoids the
+//      O(n_macro^2) blowup a naive "connect every pair sharing a window"
+//      approach hits on a popular window).
+//
+//   3. MACRO ordering: BFS directly on that bipartite structure, alternating
+//      cluster-nodes and window-nodes, starting each connected component
+//      from its lowest-degree unvisited cluster (RCM's usual seed
+//      heuristic). Each window's incidence list is expanded at most once
+//      (visited_window guard), so this is O(n_macro + m). This is the step
+//      that recovers transitivity: cluster A reaches cluster C through
+//      shared-window neighbour B, exactly what lexicographic bucketing on
+//      A and C alone would miss.
+//
+//   4. EXPAND: concatenate micro-clusters in BFS order, each contributing
+//      its member rows. O(n).
+//
+// Aggregate complexity: O(m log l) + O(m) + O(n_macro + m) + O(n) -- same
+// asymptotic class as plain cluster_lex, provided micro_threshold keeps
+// n_macro sub-linear in n. Rows with no windows at all are placed first,
+// matching cluster_lex's convention for exhausted rows.
+//
+// micro_threshold == 0 means "auto": defaults to sqrt(n), targeting
+// n_macro = O(sqrt(n)). This is a first cut at the adaptive-depth problem
+// flagged as risky after the fixed-granularity multilevel masking
+// experiment -- it scales with n instead of being a hardcoded constant, but
+// it isn't yet responsive to the *actual* bucket-size distribution the way
+// a real adaptive rule should be. Benchmark before trusting it.
+// ------------------------------------------------------------------------
+struct MicroMacroStats {
+    size_t n_micro = 0;          // number of micro-clusters formed
+    size_t micro_threshold = 0;  // threshold actually used, post auto-resolve
+    size_t macro_incidences = 0; // total (cluster, window) incidence pairs indexed
+    size_t macro_components = 0; // disconnected components the macro BFS walked
+};
+
+inline void cluster_lex_micromacro( const CSR<size_t, size_t>& Ahat, std::vector<size_t>& P,
+                                     size_t micro_threshold = 0,
+                                     MicroMacroStats* stats_out = nullptr,
+                                     CSR<size_t, size_t>* Ahat_macro_out = nullptr ) {
+    const size_t n = Ahat.rows;
+    P.resize( n );
+    if ( n == 0 )
+        return;
+
+    if ( micro_threshold == 0 )
+        micro_threshold =
+            std::max<size_t>( 1, static_cast<size_t>( std::sqrt( static_cast<double>( n ) ) ) );
+
+    const std::vector<size_t> rank = column_rank( Ahat );
+
+    // Per-row signature: same construction as cluster_lex (rank-remapped,
+    // sorted ascending). Duplicated rather than factored out of cluster_lex
+    // so that function stays untouched while this one is being validated.
+    std::vector<std::vector<size_t>> sig( n );
+#pragma omp parallel for schedule( dynamic )
+    for ( size_t i = 0; i < n; ++i ) {
+        size_t s = Ahat.row_ptr[i], e = Ahat.row_ptr[i + 1];
+        sig[i].resize( e - s );
+        for ( size_t k = s; k < e; ++k )
+            sig[i][k - s] = rank[Ahat.col_ind[k]];
+        std::sort( sig[i].begin(), sig[i].end() );
+    }
+
+    // ---- Phase 1: MICRO clustering -------------------------------------
+    // Same iterative radix-bucket recursion as cluster_lex's process_bucket,
+    // except a group becomes a leaf (a micro-cluster) once its size drops
+    // to micro_threshold, not just when it drops to 1.
+    std::vector<size_t> exhausted_rows;
+    std::vector<std::vector<size_t>> micro_groups;
+    {
+        struct Task {
+            std::vector<size_t> group;
+            size_t depth;
+        };
+
+        std::unordered_map<size_t, std::vector<size_t>> top_buckets;
+        for ( size_t i = 0; i < n; ++i ) {
+            if ( sig[i].empty() )
+                exhausted_rows.push_back( i );
+            else
+                top_buckets[sig[i][0]].push_back( i );
+        }
+
+        std::vector<size_t> keys;
+        keys.reserve( top_buckets.size() );
+        for ( auto& kv : top_buckets )
+            keys.push_back( kv.first );
+
+        // Move buckets into a plain vector first so the parallel region
+        // below never touches the unordered_map concurrently.
+        std::vector<std::vector<size_t>> top_groups( keys.size() );
+        for ( size_t b = 0; b < keys.size(); ++b )
+            top_groups[b] = std::move( top_buckets[keys[b]] );
+
+        std::vector<std::vector<std::vector<size_t>>> per_key_groups( keys.size() );
+
+#pragma omp parallel for schedule( dynamic )
+        for ( size_t ki = 0; ki < keys.size(); ++ki ) {
+            std::vector<Task> stack;
+            stack.push_back( { std::move( top_groups[ki] ), 1 } );
+            auto& out_groups = per_key_groups[ki];
+
+            while ( !stack.empty() ) {
+                Task task = std::move( stack.back() );
+                stack.pop_back();
+
+                if ( task.group.size() <= micro_threshold ) {
+                    out_groups.push_back( std::move( task.group ) );
+                    continue;
+                }
+
+                std::vector<size_t> local_exhausted;
+                std::unordered_map<size_t, std::vector<size_t>> buckets;
+                for ( size_t r : task.group ) {
+                    if ( sig[r].size() <= task.depth )
+                        local_exhausted.push_back( r );
+                    else
+                        buckets[sig[r][task.depth]].push_back( r );
+                }
+                if ( !local_exhausted.empty() )
+                    out_groups.push_back( std::move( local_exhausted ) );
+
+                for ( auto& kv : buckets )
+                    stack.push_back( { std::move( kv.second ), task.depth + 1 } );
+            }
+        }
+
+        for ( auto& pg : per_key_groups )
+            for ( auto& g : pg )
+                micro_groups.push_back( std::move( g ) );
+    }
+
+    const size_t n_micro = micro_groups.size();
+
+    // ---- Phase 2: MACRO graph, window-indexed --------------------------
+    // Summary signature per micro-cluster = union of member rows' windows.
+    std::vector<std::vector<size_t>> macro_sig( n_micro );
+    for ( size_t c = 0; c < n_micro; ++c ) {
+        std::vector<size_t> u;
+        for ( size_t r : micro_groups[c] )
+            u.insert( u.end(), sig[r].begin(), sig[r].end() );
+        std::sort( u.begin(), u.end() );
+        u.erase( std::unique( u.begin(), u.end() ), u.end() );
+        macro_sig[c] = std::move( u );
+    }
+
+    const size_t n_windows = Ahat.cols;
+    std::vector<std::vector<size_t>> window_to_clusters( n_windows );
+    size_t macro_incidences = 0;
+    for ( size_t c = 0; c < n_micro; ++c ) {
+        for ( size_t w : macro_sig[c] )
+            window_to_clusters[w].push_back( c );
+        macro_incidences += macro_sig[c].size();
+    }
+
+    // ---- Phase 3: MACRO ordering via bipartite BFS ----------------------
+    // Alternates cluster-nodes and window-nodes. Each window's incidence
+    // list is expanded at most once (visited_window guard), so total work
+    // is bounded by macro_incidences, never by cluster-cluster pairs.
+    std::vector<char> visited_cluster( n_micro, 0 );
+    std::vector<char> visited_window( n_windows, 0 );
+    std::vector<size_t> macro_order;
+    macro_order.reserve( n_micro );
+    size_t macro_components = 0;
+
+    // RCM-style seeding: start each component from its lowest-degree
+    // unvisited node (degree = summary size).
+    std::vector<size_t> by_degree( n_micro );
+    std::iota( by_degree.begin(), by_degree.end(), 0 );
+    std::sort( by_degree.begin(), by_degree.end(), [&]( size_t a, size_t b ) {
+        return macro_sig[a].size() < macro_sig[b].size();
+    } );
+
+    for ( size_t seed_idx : by_degree ) {
+        if ( visited_cluster[seed_idx] )
+            continue;
+
+        ++macro_components;
+        std::vector<size_t> queue;
+        queue.push_back( seed_idx );
+        visited_cluster[seed_idx] = 1;
+        size_t qh = 0;
+
+        while ( qh < queue.size() ) {
+            size_t c = queue[qh++];
+            macro_order.push_back( c );
+
+            for ( size_t w : macro_sig[c] ) {
+                if ( visited_window[w] )
+                    continue;
+                visited_window[w] = 1;
+                for ( size_t c2 : window_to_clusters[w] ) {
+                    if ( !visited_cluster[c2] ) {
+                        visited_cluster[c2] = 1;
+                        queue.push_back( c2 );
+                    }
+                }
+            }
+        }
+    }
+    expect( macro_order.size() == n_micro );
+
+    // ---- Phase 4: expand back to a row permutation -----------------------
+    size_t pos = 0;
+    for ( size_t r : exhausted_rows )
+        P[pos++] = r;
+    for ( size_t c : macro_order )
+        for ( size_t r : micro_groups[c] )
+            P[pos++] = r;
+    expect( pos == n );
+
+    if ( stats_out ) {
+        stats_out->n_micro = n_micro;
+        stats_out->micro_threshold = micro_threshold;
+        stats_out->macro_incidences = macro_incidences;
+        stats_out->macro_components = macro_components;
+    }
+
+    if ( Ahat_macro_out ) {
+        Ahat_macro_out->rows = n_micro;
+        Ahat_macro_out->cols = n_windows;
+        Ahat_macro_out->nzcount.resize( n_micro );
+        Ahat_macro_out->row_ptr.assign( n_micro + 1, 0 );
+        for ( size_t c = 0; c < n_micro; ++c ) {
+            Ahat_macro_out->nzcount[c] = macro_sig[c].size();
+            Ahat_macro_out->row_ptr[c + 1] = Ahat_macro_out->row_ptr[c] + macro_sig[c].size();
+        }
+        Ahat_macro_out->col_ind.resize( Ahat_macro_out->row_ptr[n_micro] );
+        Ahat_macro_out->values.assign( Ahat_macro_out->row_ptr[n_micro], 1 );
+        Ahat_macro_out->pattern_only = false;
+        for ( size_t c = 0; c < n_micro; ++c )
+            std::copy( macro_sig[c].begin(), macro_sig[c].end(),
+                       Ahat_macro_out->col_ind.begin() + Ahat_macro_out->row_ptr[c] );
+    }
+
+    LOG_INFO( "msg", "cluster_lex_micromacro done", "n", n, "n_micro", n_micro,
+              "micro_threshold", micro_threshold, "macro_components", macro_components );
+}
 } // namespace club

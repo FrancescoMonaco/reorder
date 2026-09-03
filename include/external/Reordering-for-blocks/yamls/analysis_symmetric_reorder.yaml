@@ -1,5 +1,5 @@
 variables:
-  mtx: 'datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
   perm: 
     - SB_gray
     - random1D
@@ -23,4 +23,4 @@ jobs:
   - config: "perm"
     config_jobs:
       - tag: "ANALYSIS_SYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --perm perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --block-sizes 4 8 16 32 64 128"
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type SYMMETRIC --block-sizes 4 8 16 32 64 128"

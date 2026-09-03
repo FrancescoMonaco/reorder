@@ -1,5 +1,5 @@
 variables:
-  mtx: 'datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
   perm:
     - GROOT_reorder
     - SB_degree
@@ -22,4 +22,4 @@ jobs:
   - config: "perm"
     config_jobs:
       - tag: "ANALYSIS_RANDOM_ROW"
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --block-sizes 4 8 16 32 64 128 "
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --block-sizes 4 8 16 32 64 128 "

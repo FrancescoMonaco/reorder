@@ -121,11 +121,11 @@ def run_smat_spmm(matrix_path, perm_path=None, perm_type='ROW',
             # Scale matrix to fit in FP16 range
             scale_factor = (FP16_MAX * 0.99) / max_val  # Use 0.99 for safety margin
             A_scaled = A_cpu * scale_factor
-            A_fp16 = A_scaled.astype(np.float16)
+            A_fp16 = A_scaled.astype(np.int16)
             print(f"WARNING: Matrix values scaled by {scale_factor:.6e} to fit in FP16 range (max: {max_val:.6e})")
         else:
             # Safe to convert directly
-            A_fp16 = A_cpu.astype(np.float16)
+            A_fp16 = A_cpu.astype(np.int16)
         
         # Write to MTX file
         t0 = time.perf_counter()

@@ -1,5 +1,5 @@
 variables:
-  mtx: 'datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
   perm:
     - SB_amd
     - SB_gray
@@ -26,30 +26,30 @@ jobs:
     config_jobs:
 
       - tag: "ASPT_SPMM_ROW_RANDOM"
-        command: "python3 include/external/Reordering-for-blocks/operators/aspt_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/aspt_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
 
       - tag: "DTC_SPMM_ROW_RANDOM"
         preprocess: |
           source include/external/Reordering-for-blocks/operators/dtc_preprocess.sh
           mtx_name=$(basename {mtx} .mtx)
-        command: "python3 include/external/Reordering-for-blocks/operators/dtc_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols} --n-iterations 1"
+        command: "python3 include/external/Reordering-for-blocks/operators/dtc_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols} --n-iterations 1"
 
       - tag: "FLASHSPARSE_SPMM_ROW_RANDOM"
         preprocess: |
           source include/external/Reordering-for-blocks/operators/flashsparse_preprocess.sh
           mtx_name=$(basename {mtx} .mtx)
-        command: "python3 include/external/Reordering-for-blocks/operators/flashsparse_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/flashsparse_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
 
       - tag: "CUSPARSE_SPMM_BSR_ROW_RANDOM"
-        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ROW --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ROW --n-cols {n_cols}"
       - tag: "CUSPARSE_SPMM_CSR_ROW_RANDOM"
-        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
 
       - tag: "SMAT_SPMM_ROW_RANDOM"
-        command: "python3 include/external/Reordering-for-blocks/operators/smat_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ROW --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/smat_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ROW --n-cols {n_cols}"
 
       - tag: "ACCSPMM_SPMM_ROW_RANDOM"
-        command: "python3 include/external/Reordering-for-blocks/operators/accspmm_spmm.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/accspmm_spmm.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-cols {n_cols}"
 
       # - tag: "BLEST_BFS_RANDOM_ROW"  # disabled
-      #   command: "python3 include/external/Reordering-for-blocks/operators/blest_bfs.py {mtx} --base-perm perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-sources 64"
+      #   command: "python3 include/external/Reordering-for-blocks/operators/blest_bfs.py {mtx} --base-perm /data/matrices/perms/random1D/$mtx_name.perm --base-perm-type SYMMETRIC --perm /data/matrices/perms_random/{perm}/$mtx_name.perm --perm-type ROW --n-sources 64"

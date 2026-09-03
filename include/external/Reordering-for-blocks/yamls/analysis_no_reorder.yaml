@@ -1,5 +1,5 @@
 variables:
-  mtx: 'datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
 
 preprocess: |
   source ~/.venv/bin/activate

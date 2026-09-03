@@ -1,5 +1,5 @@
 # This is the base folder for storing the Matrix Market files
-path: ./datasets
+path: /data/matrices/datasets
 
 # This is an example subfolder/category of matrices
 small-matrices-test:
@@ -27,4 +27,3 @@ large-matrices:
     min_nnzs: 1000000     # 10^6
     max_nnzs: 100000000   # 10^8
     limit: 10000
-

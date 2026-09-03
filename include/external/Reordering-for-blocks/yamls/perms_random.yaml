@@ -1,5 +1,5 @@
 variables:
-  mtx: 'datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
 preprocess: |
   source ~/.venv/bin/activate
 
@@ -11,12 +11,12 @@ jobs:
         preprocess: |
           source include/external/Reordering-for-blocks/MtxPerm/GROOT/groot_preprocess.sh
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/GROOT_reorder
-          perm_path=perms_random/GROOT_reorder/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/GROOT_reorder
+          perm_path=/data/matrices/perms_random/GROOT_reorder/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           python3 include/external/Reordering-for-blocks/MtxPerm/GROOT/reorder.py $temp_mtx $perm_path;
           rm -f $temp_mtx
 
@@ -26,132 +26,132 @@ jobs:
       - tag: "random1D_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/random1D
-          perm_path=perms_random/random1D/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/random1D
+          perm_path=/data/matrices/perms_random/random1D/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_1d.py $temp_mtx $perm_path;
           rm -f $temp_mtx
 
       - tag: "CLUB_reorder_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/CLUB_reorder
-          perm_path=perms_random/CLUB_reorder/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/CLUB_reorder
+          perm_path=/data/matrices/perms_random/CLUB_reorder/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py $temp_mtx $perm_path;
           rm -f $temp_mtx
 
-      # - tag: "SPARTA_reorder_RANDOM"  # disabled
-      #   preprocess: |
-      #     mtx_name=$(basename {mtx} .mtx)
-      #     mkdir -p perms_random/SPARTA_reorder
-      #     perm_path=perms_random/SPARTA_reorder/$mtx_name.perm
-      #   command: >
-      #     temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
-      #     python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-      #     --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
-      #     python3 include/external/Reordering-for-blocks/MtxPerm/SPARTA/reorder.py $temp_mtx $perm_path --block-size 32 --tau 0.5;
-      #     rm -f $temp_mtx
+      - tag: "SPARTA_reorder_RANDOM"  # disabled
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SPARTA_reorder
+          perm_path=/data/matrices/perms_random/SPARTA_reorder/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          python3 include/external/Reordering-for-blocks/MtxPerm/SPARTA/reorder.py $temp_mtx $perm_path --block-size 32 --tau 0.5;
+          rm -f $temp_mtx
 
       - tag: "SB_degree_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_degree
-          perm_path=perms_random/SB_degree/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_degree
+          perm_path=/data/matrices/perms_random/SB_degree/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_degree_permutation.py $temp_mtx $perm_path;
           rm -f $temp_mtx
 
       - tag: "SB_gray_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_gray
-          perm_path=perms_random/SB_gray/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_gray
+          perm_path=/data/matrices/perms_random/SB_gray/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/gray_perm $temp_mtx $perm_path;
           rm -f $temp_mtx
 
       - tag: "SB_rcm_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_rcm
-          perm_path=perms_random/SB_rcm/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_rcm
+          perm_path=/data/matrices/perms_random/SB_rcm/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           python3 include/external/Reordering-for-blocks/MtxPerm/RCM/rcm_perm.py $temp_mtx $perm_path;
           rm -f $temp_mtx
 
       - tag: "SB_metis_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_metis
-          perm_path=perms_random/SB_metis/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_metis
+          perm_path=/data/matrices/perms_random/SB_metis/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/metis_part_perm $temp_mtx $perm_path --nparts 128;
           rm -f $temp_mtx
 
       - tag: "SB_amd_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_amd
-          perm_path=perms_random/SB_amd/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_amd
+          perm_path=/data/matrices/perms_random/SB_amd/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/amd_perm $temp_mtx $perm_path;
           rm -f $temp_mtx
 
       - tag: "SB_rabbit_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_rabbit
-          perm_path=perms_random/SB_rabbit/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_rabbit
+          perm_path=/data/matrices/perms_random/SB_rabbit/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/rabbit_perm $temp_mtx $perm_path;
           rm -f $temp_mtx
 
       - tag: "SB_patoh_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_patoh
-          perm_path=perms_random/SB_patoh/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_patoh
+          perm_path=/data/matrices/perms_random/SB_patoh/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/patoh_perm $temp_mtx $perm_path --nparts 128;
           rm -f $temp_mtx
 
       - tag: "SB_slashburn_RANDOM"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/SB_slashburn
-          perm_path=perms_random/SB_slashburn/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/SB_slashburn
+          perm_path=/data/matrices/perms_random/SB_slashburn/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/slashburn_perm $temp_mtx $perm_path;
           rm -f $temp_mtx
 
@@ -159,12 +159,12 @@ jobs:
       #   preprocess: |
       #     source include/external/Reordering-for-blocks/MtxPerm/ACCORDER/accorder_preprocess.sh
       #     mtx_name=$(basename {mtx} .mtx)
-      #     mkdir -p perms_random/ACCORDER_reorder
-      #     perm_path=perms_random/ACCORDER_reorder/$mtx_name.perm
+      #     mkdir -p /data/matrices/perms_random/ACCORDER_reorder
+      #     perm_path=/data/matrices/perms_random/ACCORDER_reorder/$mtx_name.perm
       #   command: >
       #     temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
       #     python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-      #     --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+      #     --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
       #     ./include/external/Reordering-for-blocks/MtxPerm/ACCORDER/build/accorder_perm $temp_mtx $perm_path;
       #     rm -f $temp_mtx
 
@@ -174,11 +174,11 @@ jobs:
         preprocess: |
           source include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/tca_preprocess.sh
           mtx_name=$(basename {mtx} .mtx)
-          mkdir -p perms_random/TCA_reorder
-          perm_path=perms_random/TCA_reorder/$mtx_name.perm
+          mkdir -p /data/matrices/perms_random/TCA_reorder
+          perm_path=/data/matrices/perms_random/TCA_reorder/$mtx_name.perm
         command: >
           temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
           python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
-          --perm perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type SYMMETRIC &&
           python3 include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/reorder.py $temp_mtx $perm_path;
           rm -f $temp_mtx

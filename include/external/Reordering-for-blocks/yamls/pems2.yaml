@@ -7,17 +7,6 @@ jobs:
   - config: "perm"
     config_jobs:
 
-      - tag: "GROOT_reorder"
-        preprocess: |
-          source include/external/Reordering-for-blocks/MtxPerm/GROOT/groot_preprocess.sh
-          mtx_name=$(basename {mtx} .mtx)
-          mkdir -p /data/matrices/perms/GROOT_reorder
-          perm_path=/data/matrices/perms/GROOT_reorder/$mtx_name.perm
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/GROOT/reorder.py {mtx} $perm_path"
-
-  - config: "perm"
-    config_jobs:
-
       - tag: "random1D"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
@@ -31,35 +20,6 @@ jobs:
           mkdir -p /data/matrices/perms/random2D
           perm_path=/data/matrices/perms/random2D/$mtx_name.perm
         command: "python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_2d.py {mtx} $perm_path"
-
-      - tag: "SB_degree"
-        preprocess: |
-          mtx_name=$(basename {mtx} .mtx)
-          mkdir -p /data/matrices/perms/SB_degree
-          perm_path=/data/matrices/perms/SB_degree/$mtx_name.perm
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_degree_permutation.py {mtx} $perm_path"
-
-      - tag: "SB_gray"
-        preprocess: |
-          mtx_name=$(basename {mtx} .mtx)
-          mkdir -p /data/matrices/perms/SB_gray
-          perm_path=/data/matrices/perms/SB_gray/$mtx_name.perm
-        command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/gray_perm {mtx} $perm_path"
-
-      - tag: "SB_rcm"
-        preprocess: |
-          mtx_name=$(basename {mtx} .mtx)
-          mkdir -p /data/matrices/perms/SB_rcm
-          perm_path=/data/matrices/perms/SB_rcm/$mtx_name.perm
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/RCM/rcm_perm.py {mtx} $perm_path"
-
-      - tag: "SB_metis"
-        preprocess: |
-          mtx_name=$(basename {mtx} .mtx)
-          mkdir -p /data/matrices/perms/SB_metis
-          perm_path=/data/matrices/perms/SB_metis/$mtx_name.perm
-        command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/metis_part_perm {mtx} $perm_path --nparts 128"
-
       # - tag: "SPARTA_reorder"  # disabled
       #   preprocess: |
       #     mtx_name=$(basename {mtx} .mtx)

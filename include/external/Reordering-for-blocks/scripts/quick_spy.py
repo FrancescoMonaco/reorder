@@ -30,6 +30,7 @@ for key, info in PERMS.items():
 _ALIAS['random'] = 'random1D'
 _ALIAS['groot'] = 'GROOT_reorder'
 _ALIAS['sparta'] = 'SPARTA_reorder'
+_ALIAS['club'] = 'CLUB_reorder'
 _ALIAS['dtc-lsh'] = 'TCA_reorder'
 _ALIAS['dtclsh'] = 'TCA_reorder'
 _ALIAS['tca'] = 'TCA_reorder'
