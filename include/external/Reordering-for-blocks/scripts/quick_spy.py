@@ -31,6 +31,10 @@ _ALIAS['random'] = 'random1D'
 _ALIAS['groot'] = 'GROOT_reorder'
 _ALIAS['sparta'] = 'SPARTA_reorder'
 _ALIAS['club'] = 'CLUB_reorder'
+_ALIAS['club2s'] = 'CLUB_jaccard'
+_ALIAS['club-2s'] = 'CLUB_jaccard'
+_ALIAS['club_jaccard'] = 'CLUB_jaccard'
+_ALIAS['clubjaccard'] = 'CLUB_jaccard'
 _ALIAS['dtc-lsh'] = 'TCA_reorder'
 _ALIAS['dtclsh'] = 'TCA_reorder'
 _ALIAS['tca'] = 'TCA_reorder'
@@ -68,11 +72,24 @@ def find_matrix(name):
     return matches[0] if matches else None
 
 
-def get_perm_type(algorithm, matrix_name):
-    """Look up perm_type from analysis CSV, default to SYMMETRIC.
+def get_perm_type(algorithm, matrix_name, perm_file=None):
+    """Resolve the perm_type to read a permutation with.
 
-    Prefers SYMMETRIC when both ROW and SYMMETRIC entries exist.
+    A two-line .perm file is always ASYMMETRIC; a one-line file can only be
+    ROW or SYMMETRIC. Since one-line files are readable by the ASYMMETRIC
+    loader too (columns are left untouched), we sniff the file first and only
+    fall back to the analysis CSV (preferring SYMMETRIC) when the file has a
+    single line.
     """
+    if perm_file is not None:
+        try:
+            with open(perm_file) as f:
+                n_lines = sum(1 for line in f if line.strip())
+            if n_lines >= 2:
+                return 'ASYMMETRIC'
+        except OSError:
+            pass
+
     try:
         import pandas as pd
         df = pd.read_csv(ANALYSIS_CSV)
@@ -162,7 +179,7 @@ def main():
             print(f'  Warning: no permutation file for {algo_key} / {mtx_name}')
             continue
 
-        perm_type = get_perm_type(algo_key, mtx_name)
+        perm_type = get_perm_type(algo_key, mtx_name, perm_file)
         try:
             row_perm, col_perm = load_permutation_file(perm_file, perm_type)
             A_perm = apply_permutation(A.copy(), row_perm, col_perm)

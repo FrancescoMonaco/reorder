@@ -1,10 +1,142 @@
 #!/usr/bin/env python3
 """
 Utility functions for matrix analysis.
+
+Hot loops are JIT-compiled with Numba (cache=True), operating directly on
+CSR/CSC index arrays. This avoids COO materialization, lexsort-based
+reordering, Python dict counting, and repeated np.unique passes.
+All outputs match the previous NumPy implementation exactly.
 """
 
 import numpy as np
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
+
+try:
+    from numba import njit, prange
+    _NUMBA = True
+except ImportError:  # pragma: no cover - graceful fallback without numba
+    _NUMBA = False
+
+    def njit(*dargs, **dkwargs):
+        def wrap(f):
+            return f
+        if dargs and callable(dargs[0]):
+            return dargs[0]
+        return wrap
+
+    def prange(*args):
+        return range(*args)
+
+
+@njit(cache=True)
+def _sort_block_ids_inplace(block_ids):
+    block_ids.sort()
+
+
+@njit(cache=True, parallel=True)
+def _rows_cols_from_csr(indptr, indices):
+    """Expand CSR structure to per-nnz row and column arrays (row-major).
+
+    Parallel over rows: row ``r`` owns the disjoint output slice
+    ``[indptr[r], indptr[r+1])``, so concurrent writes never overlap.
+    """
+    nnz = indices.shape[0]
+    rows = np.empty(nnz, dtype=np.int64)
+    cols = np.empty(nnz, dtype=np.int64)
+    m = indptr.shape[0] - 1
+    for r in prange(m):
+        s = indptr[r]
+        e = indptr[r + 1]
+        for k in range(s, e):
+            rows[k] = r
+            cols[k] = indices[k]
+    return rows, cols
+
+
+@njit(cache=True, parallel=True)
+def _csr_row_profile(indptr, indices, deg_out, spread_out):
+    """Fill per-row ``deg`` / ``spread`` arrays directly from CSR.
+
+    Parallel over rows; each iteration writes only its own ``deg_out[r]`` /
+    ``spread_out[r]`` slot, so no reduction or atomics are needed. All
+    aggregation (sums, means, maxima) happens in NumPy *outside* the kernel.
+    Empty rows get ``spread = -1`` as a sentinel so they can be masked out.
+    """
+    m = indptr.shape[0] - 1
+    for r in prange(m):
+        s = indptr[r]
+        e = indptr[r + 1]
+        d = e - s
+        deg_out[r] = d
+        if d == 0:
+            spread_out[r] = -1
+            continue
+        mn = indices[s]
+        mx = indices[s]
+        for k in range(s + 1, e):
+            c = indices[k]
+            if c < mn:
+                mn = c
+            elif c > mx:
+                mx = c
+        spread_out[r] = mx - mn
+
+
+@njit(cache=True)
+def _csc_col_stats(indptr, indices, num_cols):
+    """Column stats directly from CSC (no COO copy).
+
+    Returns (consecutive_pairs, total_pairs, num_nonempty_cols, num_empty_cols,
+    avg_col_spread, max_col_spread).
+    """
+    consec = 0
+    total_pairs = 0
+    nonempty = 0
+    sum_spread = 0.0
+    max_spread = 0
+    for c in range(num_cols):
+        s = indptr[c]
+        e = indptr[c + 1]
+        d = e - s
+        if d == 0:
+            continue
+        nonempty += 1
+        total_pairs += d - 1
+        mn = indices[s]
+        mx = indices[s]
+        prev = indices[s]
+        for k in range(s + 1, e):
+            r = indices[k]
+            if r == prev + 1:
+                consec += 1
+            if r < mn:
+                mn = r
+            elif r > mx:
+                mx = r
+            prev = r
+        spread = mx - mn
+        sum_spread += spread
+        if spread > max_spread:
+            max_spread = spread
+    avg_spread = sum_spread / nonempty if nonempty > 0 else 0.0
+    return (consec, total_pairs, nonempty, num_cols - nonempty,
+            avg_spread, max_spread)
+
+
+@njit(cache=True)
+def _count_distinct_sorted(sorted_ids):
+    """Count distinct values in a sorted int64 array (0 for empty)."""
+    n = sorted_ids.shape[0]
+    if n == 0:
+        return 0
+    c = 1
+    prev = sorted_ids[0]
+    for i in range(1, n):
+        v = sorted_ids[i]
+        if v != prev:
+            c += 1
+            prev = v
+    return c
 
 
 def analyze_block_structure(A_scipy, block_sizes=None):

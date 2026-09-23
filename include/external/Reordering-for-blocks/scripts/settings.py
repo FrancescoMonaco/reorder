@@ -296,6 +296,10 @@ PERMS = {
     'SB_slashburn':    {'display': 'SlashBurn', 'color': PALETTE[7]},
     'SPARTA_reorder':  {'display': 'SPARTA',   'color': PALETTE[8]},
     'CLUB_reorder':    {'display': 'CLUB',     'color': PALETTE[9]},
+    # Two-sided CLUB (row + column perms) -> evaluated with --perm-type
+    # ASYMMETRIC. Kept next to CLUB_reorder so the two variants sit together
+    # in legends and tables.
+    'CLUB_jaccard':    {'display': 'CLUB-2S',  'color': '#8B2FC9'},
     'TCA_reorder':     {'display': 'DTC-LSH',  'color': PALETTE[10]},
     'SB_degree':       {'display': 'Degree',    'color': PALETTE[11]},
     'random1D':        {'display': 'Random',   'color': '#000000'},

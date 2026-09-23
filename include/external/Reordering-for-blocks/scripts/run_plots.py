@@ -25,6 +25,7 @@ PLOT_GROUPS = [
     ("Grouped improvement scatter",    "grouped-scatter"),
     ("Break-even analysis plots",      "breakeven"),
     ("Reorder analysis plots",         "reorder-analysis"),
+    ("Pareto density-vs-time plots",   "pareto"),
     ("Performance profile plots",      "profiles"),
     ("Speedup profile plots",          "speedup-profiles"),
     ("Aggregate improvement plots",    "aggregate-improvement"),
@@ -237,6 +238,9 @@ def parse_cli() -> argparse.Namespace:
         help="Use ROW perm_type pipeline (forwarded as --row to all scripts)")
     parser.add_argument("--symmetric", action="store_true",
         help="Use SYMMETRIC perm_type pipeline (default, forwarded as --symmetric)")
+    parser.add_argument("--asymmetric", action="store_true",
+        help="Use ASYMMETRIC perm_type pipeline (forwarded as --asymmetric to "
+             "all scripts; needed for two-sided perms such as CLUB_jaccard)")
 
     # Pass-through args (everything after --)
     parser.add_argument("extra", nargs=argparse.REMAINDER,
@@ -252,11 +256,13 @@ def main() -> None:
     if extra and extra[0] == "--":
         extra = extra[1:]
 
-    # Forward --random and --row/--symmetric to all underlying scripts
+    # Forward --random and --row/--symmetric/--asymmetric to all scripts
     if args.random:
         extra = ["--random"] + extra
     if args.row:
         extra = ["--row"] + extra
+    elif args.asymmetric:
+        extra = ["--asymmetric"] + extra
     elif args.symmetric:
         extra = ["--symmetric"] + extra
 
