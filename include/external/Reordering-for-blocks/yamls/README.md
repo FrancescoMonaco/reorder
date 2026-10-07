@@ -29,7 +29,21 @@ perms:
     type: symmetric|asymmetric|row
 ```
 
-Algorithms defined: `identity`, `random1D`, `random2D`, `SB_rcm`, `SB_degree`, `SB_gray`, `SB_amd`, `SB_metis`, `SB_rabbit`, `SB_slashburn`, `SPARTA_reorder`
+Algorithms defined: `identity`, `random1D`, `random2D`, `SB_rcm`, `SB_degree`, `SB_gray`, `SB_amd`, `SB_metis`, `SB_rabbit`, `SB_slashburn`, `SB_patoh`, `SPARTA_reorder`, `GROOT_reorder`, `TCA_reorder`, `CLUB_reorder`, `CLUB_jaccard`
+
+### Permutation file shape vs. perm_type
+
+| File lines | Written by | Evaluate with |
+|------------|-----------|----------------|
+| 1 line (row perm) | every algorithm including `CLUB_reorder` | `--perm-type ROW` (rows) or `SYMMETRIC` (rows+cols, square matrices) |
+| 2 lines (row perm / col perm) | `CLUB_jaccard` (`--technique jaccard`, two-sided) | `--perm-type ASYMMETRIC` — both lines applied: `A' = P_row * A * P_col^T` |
+
+The `ASYMMETRIC` loader also accepts **single-line** files and treats them as
+row-only (columns untouched). This is intentional: it lets row-only algorithms
+be dropped into the ASYMMETRIC tables for an apples-to-apples comparison with
+two-sided `CLUB_jaccard` runs, evaluated by exactly the same code path.
+Conversely, reading a two-line file with `--perm-type ROW` applies line 1 only,
+which gives the row-only view of the same two-sided run.
 
 ## Experiment YAMLs
 
@@ -54,6 +68,39 @@ Benchmark SpMM kernels with permuted matrices:
 | `operations_row_reorder.yaml` | Row-only permutation |
 | `operations_symmetric_reorder.yaml` | Symmetric permutation |
 | `operations_asymmetric_reorder.yaml` | Asymmetric permutation |
+
+## Running the CLUB pipelines
+
+```bash
+# 1. generate permutations (row-only stripe baseline + two-sided jaccard)
+sbatchman launch --file yamls/perms.yaml
+
+# 2. structural analysis
+sbatchman launch --file yamls/analysis_row_reorder.yaml        # ROW view
+sbatchman launch --file yamls/analysis_asymmetric_reorder.yaml # row+col view
+
+# 3. SpMM benchmarks
+sbatchman launch --file yamls/operations_row_reorder.yaml
+sbatchman launch --file yamls/operations_asymmetric_reorder.yaml
+
+# 4. aggregate + plots (--asymmetric selects the new pipeline)
+python scripts/parse_results.py
+python scripts/plot.py --asymmetric
+python scripts/plot.py --row
+```
+
+`parse_results.py` labels rows by tag, so the `*_ASYMMETRIC` tags land in
+`results_analysis.csv` / `results_operations.csv` with
+`perm_type == 'ASYMMETRIC'` and coexist with the `ROW` / `SYMMETRIC` rows.
+
+To run `CLUB_jaccard` in a shell yourself:
+
+```bash
+python include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py \
+    /data/matrices/datasets/3elt_dual/3elt_dual.mtx /tmp/3elt_dual.perm \
+    --technique jaccard --bs 16 --tau 0.5 --max-iters 4
+# add --row-only for a single-line (row-only) permutation
+```
 
 ## YAML Structure Pattern
 
