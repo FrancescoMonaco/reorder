@@ -26,13 +26,21 @@ if (OpenMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-find_package(icecream-cpp)
+find_package(icecream-cpp QUIET)
+if(NOT icecream-cpp_FOUND)
+  add_subdirectory(include/external/icecream-cpp)
+  if(NOT TARGET icecream-cpp::icecream-cpp)
+    add_library(icecream-cpp::icecream-cpp ALIAS icecream-cpp)
+  endif()
+endif()
 
 include_directories("include")
 include_directories("include/external/icecream-cpp")
 
 add_executable(reorder test/reorder_test.cpp)
 target_link_libraries(reorder PRIVATE icecream-cpp::icecream-cpp)
+# Lets the driver locate datasets/ regardless of launch directory.
+target_compile_definitions(reorder PRIVATE "REORDER_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}\"")
 
 
 ###############################################################################
@@ -82,18 +90,13 @@ if(CLANG_FORMAT_BIN)
         "test/*.cpp"
     )
 
-    # Create a custom target that runs clang-format on the files
+    # Standalone (`--target format`); never a build dependency.
     add_custom_target(
         format
         COMMAND ${CLANG_FORMAT_BIN} -i ${SRC_FILES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Running clang-format on source files..."
     )
-
-    # Make build targets depend on the format target 
-    # so it runs BEFORE they compile
-    add_dependencies(reorder format)
-    add_dependencies(_reorder_impl format)
 else()
     message(WARNING "clang-format not found. Auto-formatting is disabled.")
 endif()
