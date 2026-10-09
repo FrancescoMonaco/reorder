@@ -1,0 +1,41 @@
+# =============================================================================
+# ASYMMETRIC (two-sided) reordering analysis.
+#
+#  * CLUB_jaccard writes a TWO-line .perm (row perm / col perm) -> both lines
+#    are applied: A' = P_row * A * P_col^T.
+#  * Every other algorithm writes a SINGLE-line .perm; the ASYMMETRIC loader
+#    accepts it as a row-only permutation (columns untouched), so the
+#    row-only baselines can be compared in the same table, evaluated with
+#    exactly the same code path as CLUB_jaccard.
+#
+# Results land in results/results_analysis.csv with perm_type == 'ASYMMETRIC'
+# (keyed by matrix + perm + perm_type, so they coexist with the ROW and
+# SYMMETRIC rows).
+# =============================================================================
+variables:
+  mtx: '/data/matrices/datasets/matrices_extended.txt'
+  perm:
+    - SB_gray
+    - random1D
+    - SB_amd
+    - SB_degree
+    - SB_metis
+    - SB_rcm
+    - SB_rabbit
+    - SB_patoh
+    - SB_slashburn
+    - GROOT_reorder
+    - CLUB_reorder
+    - CLUB_jaccard
+    - TCA_reorder
+    # - ACCORDER_reorder  # disabled
+
+preprocess: |
+  micromamba activate reorder_env
+  mtx_name=$(basename {mtx} .mtx)
+
+jobs:
+  - config: "perm"
+    config_jobs:
+      - tag: "ANALYSIS_ASYMMETRIC"
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --block-sizes 4 8 16 32 64 128"

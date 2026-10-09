@@ -1,5 +1,5 @@
 variables:
-  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_extended.txt'
   perm:
     - GROOT_reorder
     - SB_degree
@@ -10,7 +10,7 @@ variables:
     - SB_rabbit
     - SB_patoh
     - SB_slashburn
-    - 
+    - CLUB_reorder
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
 

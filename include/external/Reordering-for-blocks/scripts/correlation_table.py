@@ -820,6 +820,11 @@ def parse_args():
         help="Use SYMMETRIC perm_type pipeline (default)"
     )
     parser.add_argument(
+        "--asymmetric", action="store_true",
+        help="Use ASYMMETRIC perm_type pipeline (two-sided perms, e.g. "
+             "CLUB_jaccard)"
+    )
+    parser.add_argument(
         "--output", default=None,
         help="Output directory for .tex files (default: plots/correlation_tables or plots_random/correlation_tables with --random)"
     )
@@ -886,13 +891,13 @@ def main():
     args = parse_args()
 
     # Resolve perm_type pipeline
-    perm_type_filter = 'ROW' if args.row else 'SYMMETRIC'
+    perm_type_filter = 'ROW' if args.row else ('ASYMMETRIC' if args.asymmetric else 'SYMMETRIC')
     pipeline_key = ('random_' if args.random else '') + perm_type_filter.lower()
 
     # Apply --random defaults
     if args.output is None:
         data_label = 'random' if args.random else 'original'
-        perm_label = 'row' if args.row else 'symmetric'
+        perm_label = perm_type_filter.lower()
         args.output = f"plots/{data_label}_{perm_label}/correlation_tables"
 
     out_dir = Path(args.output)

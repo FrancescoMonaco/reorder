@@ -1,5 +1,5 @@
 variables:
-  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_extended.txt'
   perm: 
     - SB_gray
     - random1D

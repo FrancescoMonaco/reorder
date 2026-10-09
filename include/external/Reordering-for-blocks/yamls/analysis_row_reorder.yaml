@@ -1,5 +1,5 @@
 variables:
-  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_extended.txt'
   perm:
     - SB_gray
     - random1D
@@ -11,6 +11,9 @@ variables:
     - SB_patoh
     - SB_slashburn
     - GROOT_reorder
+    - CLUB_reorder
+    # Two-line ASYMMETRIC .perm; ROW mode reads line 1 (row perm) only.
+    - CLUB_jaccard
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
 

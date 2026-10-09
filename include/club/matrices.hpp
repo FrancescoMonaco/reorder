@@ -45,6 +45,58 @@ namespace club {
             int input_rows = 0, input_cols = 0, input_nnz = 0;
             bool found_dims = false;
 
+            // MatrixMarket banner: "%%MatrixMarket matrix coordinate
+            // <general|symmetric|skew-symmetric|hermitian>". Matrices stored in
+            // a symmetric format keep only ONE triangle on disk;
+            // scipy.io.mmread expands them on load, and every structural
+            // metric downstream (block density, sketches) expects the FULL
+            // matrix. Detect the storage kind here and mirror off-diagonal
+            // entries below — reading the stored triangle only made the C++
+            // pipeline see ~half the nonzeros of symmetric files (e.g. 3elt:
+            // 13729 stored vs 27444 expanded), silently corrupting both the
+            // refinement objective and its guard.
+            enum class Sym {
+                general,
+                symmetric,
+                skew
+            };
+            Sym sym = Sym::general;
+            {
+                std::streamoff first_pos = infile.tellg();
+                if ( std::getline( infile, line ) ) {
+                    if ( !line.empty() && line.back() == '\r' )
+                        line.pop_back();
+                    if ( line.rfind( "%%MatrixMarket", 0 ) == 0 ) {
+                        std::istringstream bs( line );
+                        std::string tok;
+                        std::vector<std::string> toks;
+                        while ( bs >> tok )
+                            toks.push_back( tok );
+                        if ( toks.size() >= 4 ) {
+                            // Token order: object(matrix) format(coordinate)
+                            // field(pattern|integer|real|...) symmetry(...).
+                            // The symmetry keyword is the LAST token — do not
+                            // index it positionally (pattern files have it at
+                            // index 4, value files at index 3).
+                            const std::string& s = toks.back();
+                            // "hermitian" with a real DataT is a plain mirror
+                            // (conjugate of a real value is itself).
+                            if ( s == "symmetric" || s == "hermitian" )
+                                sym = Sym::symmetric;
+                            else if ( s == "skew-symmetric" )
+                                sym = Sym::skew;
+                        }
+                    } else {
+                        // Not a banner: rewind so the dims loop sees this line.
+                        infile.clear();
+                        infile.seekg( first_pos );
+                    }
+                } else {
+                    infile.clear();
+                    infile.seekg( first_pos );
+                }
+            }
+
             // Bug 2 + 3 fix: getline-based loop skips blank lines,
             // comment lines, and strips \r from Windows-style endings
             while ( std::getline( infile, line ) ) {
@@ -100,10 +152,57 @@ namespace club {
                     pos_holder[i].push_back( j );
                     if ( !this->pattern_only )
                         val_holder[i].push_back( val );
+
+                    // Symmetric/skew storage: mirror the off-diagonal entry so
+                    // the in-memory CSR matches what scipy.io.mmread produces.
+                    if ( sym != Sym::general && i != j ) {
+                        pos_holder[j].push_back( i );
+                        if ( !this->pattern_only )
+                            val_holder[j].push_back( sym == Sym::skew ? -val : val );
+                    }
                 }
             }
 
-            // Build CSR arrays (unchanged from your original)
+            // Build CSR arrays. Rows are sorted by column and duplicate (i,j)
+            // entries merged (values summed, matching scipy's sum_duplicates) —
+            // mirroring symmetric storage can create duplicates when a file
+            // stores both triangles, and the sorted-row invariant is assumed
+            // by transpose()/mask() downstream.
+            std::vector<std::vector<intT>> sorted_pos( rows );
+            std::vector<std::vector<DataT>> sorted_val;
+            if ( !this->pattern_only )
+                sorted_val.resize( rows );
+
+#pragma omp parallel for schedule( dynamic )
+            for ( intT i = 0; i < rows; i++ ) {
+                const size_t len = pos_holder[i].size();
+                std::vector<size_t> order( len );
+                for ( size_t t = 0; t < len; ++t )
+                    order[t] = t;
+                std::sort( order.begin(), order.end(), [&]( size_t a, size_t b ) {
+                    return pos_holder[i][a] < pos_holder[i][b];
+                } );
+                auto& pc = sorted_pos[i];
+                pc.reserve( len );
+                std::vector<DataT>* vc = this->pattern_only ? nullptr : &sorted_val[i];
+                if ( vc )
+                    vc->reserve( len );
+                for ( size_t t = 0; t < len; ++t ) {
+                    intT c = pos_holder[i][order[t]];
+                    if ( !pc.empty() && pc.back() == c ) {
+                        if ( vc )
+                            vc->back() += val_holder[i][order[t]];
+                    } else {
+                        pc.push_back( c );
+                        if ( vc )
+                            vc->push_back( val_holder[i][order[t]] );
+                    }
+                }
+            }
+            pos_holder.swap( sorted_pos );
+            if ( !this->pattern_only )
+                val_holder.swap( sorted_val );
+
             row_ptr.resize( rows + 1, 0 );
             nzcount.resize( rows, 0 );
 

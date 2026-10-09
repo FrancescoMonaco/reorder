@@ -1,19 +1,19 @@
 variables:
-  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
+  mtx: '/data/matrices/datasets/matrices_extended.txt'
 preprocess: |
-    source ~/.venv/bin/activate
+    micromamba activate reorder_env
 
 jobs:
-  - config: "perm"
-    config_jobs:
+  # - config: "perm"
+  #   config_jobs:
 
-      - tag: "GROOT_reorder"
-        preprocess: |
-          source include/external/Reordering-for-blocks/MtxPerm/GROOT/groot_preprocess.sh
-          mtx_name=$(basename {mtx} .mtx)
-          mkdir -p /data/matrices/perms/GROOT_reorder
-          perm_path=/data/matrices/perms/GROOT_reorder/$mtx_name.perm
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/GROOT/reorder.py {mtx} $perm_path"
+  #     - tag: "GROOT_reorder"
+  #       preprocess: |
+  #         source include/external/Reordering-for-blocks/MtxPerm/GROOT/groot_preprocess.sh
+  #         mtx_name=$(basename {mtx} .mtx)
+  #         mkdir -p /data/matrices/perms/GROOT_reorder
+  #         perm_path=/data/matrices/perms/GROOT_reorder/$mtx_name.perm
+  #       command: "python3 include/external/Reordering-for-blocks/MtxPerm/GROOT/reorder.py {mtx} $perm_path"
 
   - config: "perm"
     config_jobs:
@@ -58,7 +58,7 @@ jobs:
           mtx_name=$(basename {mtx} .mtx)
           mkdir -p /data/matrices/perms/SB_metis
           perm_path=/data/matrices/perms/SB_metis/$mtx_name.perm
-        command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/metis_part_perm {mtx} $perm_path --nparts 128"
+        command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/metis_part_perm {mtx} $perm_path --nparts 64"
 
       # - tag: "SPARTA_reorder"  # disabled
       #   preprocess: |
@@ -95,12 +95,38 @@ jobs:
           perm_path=/data/matrices/perms/SB_slashburn/$mtx_name.perm
         command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/slashburn_perm {mtx} $perm_path"
 
+      # Row-only CLUB (seed-refine, incumbent — keep for comparison)
       - tag: "CLUB_reorder"
         preprocess: |
           mtx_name=$(basename {mtx} .mtx)
           mkdir -p /data/matrices/perms/CLUB_reorder
           perm_path=/data/matrices/perms/CLUB_reorder/$mtx_name.perm
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx} $perm_path"
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx} $perm_path  --technique seed-refine --w 4 --L 256 --stride-s 256 --max-iters 4 --block-size 32"
+
+      # Row-only Bloom-archetype CLUB (new): mask(W=8) -> 256-bit Bloom
+      # fingerprints -> leader clustering (overlap join, new archetype below
+      # tau) -> mass order + exact-overlap chain -> stripe_refine polish.
+      # Row-only, NO identity guard: raw algorithm output for experiments.
+      - tag: "CLUB_fingerprint"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms/CLUB_fingerprint
+          perm_path=/data/matrices/perms/CLUB_fingerprint/$mtx_name.perm
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx} $perm_path --technique fingerprint --bs 16 --k-words 4 --tau-bits 8 --kmax 256 --k0 8 --max-passes 1 --window 3"
+
+      # Two-sided CLUB ("jaccard"): 0-1 sketch -> capped inverted index ->
+      # exact Jaccard clustering -> stripe chain inside clusters, alternating
+      # row/column passes until the block cost converges. Writes a TWO-line
+      # .perm (line 1 = row perm, line 2 = col perm):
+      #   * evaluate with --perm-type ASYMMETRIC  -> both lines are applied
+      #   * evaluate with --perm-type ROW         -> line 1 only (row-only view
+      #     of the same run, comparable with the row-only baselines)
+      # - tag: "CLUB_jaccard"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p /data/matrices/perms/CLUB_jaccard
+      #     perm_path=/data/matrices/perms/CLUB_jaccard/$mtx_name.perm
+      #   command: "python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx} $perm_path"
 
       # - tag: "ACCORDER_reorder"  # disabled
       #   preprocess: |

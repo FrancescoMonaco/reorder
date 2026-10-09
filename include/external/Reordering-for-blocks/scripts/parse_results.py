@@ -37,14 +37,18 @@ SPARTA_TIMER_PATTERN = re.compile(r"^timer:\s+([0-9.eE+\-]+)", re.MULTILINE)
 PERM_TAGS = {
     'SB_amd', 'SB_degree', 'SB_gray', 'SB_rcm', 'SB_metis',
     'SB_rabbit', 'SB_patoh', 'SB_slashburn',
-    'GROOT_reorder', 'SPARTA_reorder', 'TCA_reorder', 'random1D', 'random2D', "CLUB_reorder"
+    'GROOT_reorder', 'SPARTA_reorder', 'TCA_reorder', 'random1D', 'random2D',
+    'CLUB_reorder', 'CLUB_jaccard', 'CLUB_fingerprint'
 }
 
 # Random-pipeline perm tags: "<algo>_RANDOM" (from perms_random.yaml)
 RANDOM_PERM_TAGS = {f'{t}_RANDOM' for t in PERM_TAGS if t not in ('random1D', 'random2D')}
 
 # Cache format version — bump when parsed row schema changes
-CACHE_VERSION = 5
+# v6: ASYMMETRIC tags are no longer mislabelled as SYMMETRIC (see
+#     _get_perm_type) and CLUB_jaccard was added to PERM_TAGS.
+# v7: CLUB_fingerprint added to PERM_TAGS.
+CACHE_VERSION = 7
 
 
 def dedup_latest(df, key_cols):
@@ -105,13 +109,18 @@ DEFAULT_WORKERS = 32
 
 
 def _get_perm_type(tag):
-    """Determine perm_type from a job tag string."""
-    if 'ROW' in tag:
-        return 'ROW'
+    """Determine perm_type from a job tag string.
+
+    NOTE: 'ASYMMETRIC' is tested **before** 'SYMMETRIC' on purpose — the
+    former contains the latter as a substring, so the opposite order would
+    silently label every ASYMMETRIC job as SYMMETRIC.
+    """
+    if 'ASYMMETRIC' in tag:
+        return 'ASYMMETRIC'
     elif 'SYMMETRIC' in tag:
         return 'SYMMETRIC'
-    elif 'ASYMMETRIC' in tag:
-        return 'ASYMMETRIC'
+    elif 'ROW' in tag:
+        return 'ROW'
     elif 'NO_REORDER' in tag:
         return 'ROW'
     return 'UNKNOWN'

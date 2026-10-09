@@ -87,6 +87,14 @@ pipelines:
     exclude_perms: []
     exclude_kernels:
       - BLEST_BFS
+  asymmetric:               # --asymmetric on main data (two-sided perms)
+    exclude_perms: []
+    exclude_kernels:
+      - BLEST_BFS
+  random_asymmetric:        # --asymmetric on random data
+    exclude_perms: []
+    exclude_kernels:
+      - BLEST_BFS
 
 # ---- Display / Analysis Settings ------------------------------------------
 display:

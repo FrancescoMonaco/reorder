@@ -37,6 +37,10 @@ def parse_args():
                         help="Use ROW perm_type pipeline (output to plots_row/ or plots_random_row/)")
     parser.add_argument("--symmetric", action="store_true",
                         help="Use SYMMETRIC perm_type pipeline (default)")
+    parser.add_argument("--asymmetric", action="store_true",
+                        help="Use ASYMMETRIC perm_type pipeline (two-sided perms, "
+                             "e.g. CLUB_jaccard; output to plots_asymmetric/ or "
+                             "plots_random_asymmetric/)")
 
     # Output
     parser.add_argument("--out", default=None, help="Output directory (default: plots or plots_random with --random)")
@@ -73,6 +77,7 @@ def parse_args():
         'grouped-scatter',
         'breakeven',
         'reorder-analysis',
+        'pareto',
         'profiles',
         'speedup-profiles',
         'aggregate-improvement',
@@ -335,6 +340,199 @@ def generate_reorder_analysis_plots(df_analysis, out_dir, n_jobs=None):
 
     print(f"  Collected {len(tasks)} reorder analysis plot tasks")
     pu.parallel_execute(tasks, n_jobs=n_jobs)
+
+
+def generate_pareto_plots(df_analysis, out_dir, reordering_csv='results/results_reordering.csv', args=None):
+    """Pareto frontier: density improvement vs reordering time.
+
+    One point per reordering strategy. X = median reordering time over
+    matrices (log scale, ms) from the reordering CSV. Y = median, over
+    matrices, of the per-matrix mean density improvement across block
+    sizes 4/8/16/32/64/128 (each against that matrix's un-reordered
+    baseline). IQR error bars on both axes; the non-dominated strategies
+    (no other is both faster AND better) are joined by a dashed frontier.
+
+    Pairwise-complete aggregation: each strategy's quality median uses all
+    matrices where it has data (plus that matrix's baseline), and its time
+    median uses all matrices where it has timing — strategies are NOT
+    restricted to matrices complete under every strategy, since missingness
+    is concentrated in the slow/GPU methods (they time out on the hardest
+    matrices) and the complete-case subset biased the comparison toward
+    small/easy inputs. Per-strategy sample sizes (n) are reported in the
+    console table, annotated on each marker, and shown in the title.
+    """
+    print("\n=== Pareto Frontier (quality vs time) ===")
+
+    df = df_analysis.copy()
+    df['perm'] = df['perm'].fillna('None').astype(str)
+    df['matrix'] = df['matrix'].astype(str)
+
+    bd_cols = [c for c in df.columns if c.startswith('block_density_')
+               and c.split('_')[-1].isdigit()]
+    if not bd_cols:
+        print("  No block_density_* columns — skipping pareto plots.")
+        return
+
+    reorder_csv_path = Path(reordering_csv)
+    if reorder_csv_path.exists():
+        df_time = pd.read_csv(reorder_csv_path)
+        if df_time.empty or 'time_reordering_ms' not in df_time.columns:
+            print("  No reordering timing data available — skipping.")
+            return
+        df_time = df_time[['matrix', 'perm', 'time_reordering_ms']].copy()
+        df_time['perm'] = df_time['perm'].astype(str)
+        df_time['matrix'] = df_time['matrix'].astype(str)
+        df_time = df_time.groupby(['matrix', 'perm'], as_index=False)['time_reordering_ms'].mean()
+    elif 'time_reordering_ms' in df.columns:
+        df_time = df[['matrix', 'perm', 'time_reordering_ms']].copy()
+        df_time = df_time.groupby(['matrix', 'perm'], as_index=False)['time_reordering_ms'].mean()
+    else:
+        print(f"  No timing at {reorder_csv_path} and no timing column — skipping.")
+        return
+    print(f"  Loaded {len(df_time)} reordering timing entries")
+
+    all_perms = sorted(df['perm'].unique())
+    if 'None' not in all_perms:
+        print("  No 'None' baseline in analysis data — skipping.")
+        return
+    # Pairwise-complete: keep every matrix that has the baseline.
+    # Each strategy is scored on all matrices where IT has data (quality arm)
+    # and timed on all matrices where IT has timing (time arm) — no
+    # complete-across-strategies restriction.
+    has_base = df[df['perm'] == 'None']['matrix'].unique()
+    n_matrices = len(has_base)
+    df = df[df['matrix'].isin(has_base)]
+    df_time = df_time[df_time['matrix'].isin(has_base)]
+    print(f"  Using {n_matrices} matrices with a baseline "
+          f"({len(all_perms) - 1} strategies, pairwise-complete)")
+    if df.empty:
+        print("  No matrices with baseline — skipping pareto plots.")
+        return
+
+    base = (df[df['perm'] == 'None']
+            .set_index('matrix')[bd_cols]
+            .rename(columns={c: c + '_base' for c in bd_cols}))
+    df_reord = df[df['perm'] != 'None'].merge(
+        base, left_on='matrix', right_index=True, how='inner')
+    if df_reord.empty:
+        print("  No reordered data overlapping the baseline — skipping.")
+        return
+    ratios = np.column_stack([
+        (df_reord[c] / df_reord[c + '_base'].replace(0, np.nan)).to_numpy()
+        for c in bd_cols
+    ])
+    df_reord = df_reord.assign(
+        mean_density_imp=np.nanmean(np.where(np.isfinite(ratios), ratios, np.nan),
+                                    axis=1))
+    df_reord = df_reord.dropna(subset=['mean_density_imp'])
+    df_reord = df_reord[np.isfinite(df_reord['mean_density_imp'])]
+    df_time = df_time[df_time['perm'] != 'None']
+    imp_stats = (df_reord.groupby('perm')
+                 .agg(imp_med=('mean_density_imp', 'median'),
+                      imp_q1=('mean_density_imp', lambda s: s.quantile(0.25)),
+                      imp_q3=('mean_density_imp', lambda s: s.quantile(0.75)),
+                      n_imp=('mean_density_imp', 'size'))
+                 .reset_index())
+    time_stats = (df_time.groupby('perm')
+                  .agg(t_med=('time_reordering_ms', 'median'),
+                       t_q1=('time_reordering_ms', lambda s: s.quantile(0.25)),
+                       t_q3=('time_reordering_ms', lambda s: s.quantile(0.75)),
+                       n_t=('time_reordering_ms', 'size'))
+                  .reset_index())
+    stats = imp_stats.merge(time_stats, on='perm', how='inner')
+    stats = stats[(stats['t_med'] > 0) & np.isfinite(stats['imp_med'])]
+    if stats.empty:
+        print("  No usable timing/improvement data — skipping.")
+        return
+    stats['strategy'] = stats['perm'].apply(get_perm_display)
+    order = pu.profile_perm_order(set(stats['perm'].unique()))
+    stats['pos'] = stats['perm'].apply(lambda p: order.index(p) if p in order else 999)
+    stats = stats.sort_values('pos').reset_index(drop=True)
+
+    # Pareto frontier (maximize imp, minimize time): non-dominated points.
+    # Walk strategies in time order; a strategy joins the frontier iff it
+    # beats every faster one's improvement. The flag is attached to `stats`
+    # keyed by perm so the scatter can use it directly.
+    by_time = stats.sort_values('t_med')
+    frontrunners, best_y = set(), -np.inf
+    for perm, grp in by_time.groupby('perm', sort=False):
+        y = grp['imp_med'].max()
+        if y > best_y + 1e-12:
+            frontrunners.add(perm)
+            best_y = y
+    stats = stats.assign(front=stats['perm'].isin(frontrunners))
+    front = stats[stats['front']].sort_values('t_med')
+
+    # Console table with per-strategy sample sizes, sorted by quality.
+    print(f"  {'strategy':28s} {'imp_med':>8s} {'t_med_ms':>10s} {'n_imp':>6s} {'n_t':>5s}")
+    for _, row in stats.sort_values('imp_med', ascending=False).iterrows():
+        mark = '*' if row['front'] else ' '
+        print(f" {mark}{' ' if mark == '*' else ' '}{row['strategy']:26s} "
+              f"{row['imp_med']:8.3f} {row['t_med']:10.1f} "
+              f"{int(row['n_imp']):6d} {int(row['n_t']):5d}")
+    print("  (* = Pareto-optimal)")
+
+    _pareto_scatter(stats, front, out_dir, n_matrices)
+
+
+def _pareto_scatter(stats, front, out_dir, n_matrices):
+    """Draw the Pareto scatter figure (called by generate_pareto_plots)."""
+    pu.set_professional_style()
+    fig, ax = plt.subplots(figsize=(10, 6.5))
+
+    palette = pu.get_strategy_palette(list(stats['strategy'].unique()))
+
+    ax.axhline(1.0, color='black', linestyle='--', linewidth=0.8, alpha=0.6,
+               label='Baseline (no reordering)')
+
+    # Frontier line under the markers
+    if len(front) >= 2:
+        ax.plot(front['t_med'], front['imp_med'], color='black',
+                linestyle='--', linewidth=1.2, alpha=0.7, zorder=1,
+                label='Pareto frontier')
+
+    for _, row in stats.iterrows():
+        ax.errorbar(row['t_med'], row['imp_med'],
+                    xerr=[[row['t_med'] - row['t_q1']], [row['t_q3'] - row['t_med']]],
+                    yerr=[[row['imp_med'] - row['imp_q1']], [row['imp_q3'] - row['imp_med']]],
+                    fmt='none', ecolor='grey', elinewidth=1.0, capsize=3,
+                    alpha=0.6, zorder=2)
+    for _, row in stats.iterrows():
+        edge = 'gold' if row['front'] else 'black'
+        lw = 1.6 if row['front'] else 0.8
+        ax.scatter(row['t_med'], row['imp_med'], s=140,
+                   color=palette.get(row['strategy'], '#333333'),
+                   edgecolors=edge, linewidths=lw, zorder=3)
+        # Label carries the pairwise sample size: quality n first, then time
+        # n when they differ (label shows min so the weaker arm is explicit).
+        n_lab = (f"n={int(row['n_imp'])}"
+                 if int(row['n_imp']) == int(row['n_t'])
+                 else f"n={int(row['n_imp'])}/{int(row['n_t'])}")
+        ax.annotate(f"{row['strategy']}\n({n_lab})",
+                    (row['t_med'], row['imp_med']),
+                    xytext=(6, 0), textcoords='offset points',
+                    fontsize=8, va='center')
+
+    ax.set_xscale('log')
+    ax.set_xlabel('Median reordering time [ms] (per-strategy matrices)')
+    ax.set_ylabel('Median mean-density improvement (bs 4–128, per-strategy matrices)')
+
+    ax.set_xscale('log')
+    ax.set_xlabel('Median reordering time [ms]')
+    ax.set_ylabel('Median mean-density improvement (bs 4–128)')
+    ax.set_title("Pareto: quality vs reordering time  "
+                 f"(matrices with baseline: {n_matrices}; per-strategy n in labels)")
+    ax.grid(True, which='both', alpha=0.3)
+    ax.legend()
+
+    fig.tight_layout()
+    pareto_dir = out_dir / 'pareto'
+    pareto_dir.mkdir(parents=True, exist_ok=True)
+    for ext in ('pdf', 'png'):
+        fig.savefig(pareto_dir / f'pareto_density_vs_time.{ext}',
+                    bbox_inches='tight', dpi=150)
+    plt.close(fig)
+    print("  Saved pareto_density_vs_time.pdf/png")
 
 
 def generate_profile_plots(df_analysis, out_dir):
@@ -1305,7 +1503,7 @@ def _should_run(section: str, args) -> bool:
         return section in args.sections
     # Legacy coarse flags
     kernel_sections = {'grouped-scatter', 'breakeven', 'speedup-profiles'}
-    reorder_sections = {'reorder-analysis', 'profiles'}
+    reorder_sections = {'reorder-analysis', 'profiles', 'pareto'}
     if args.only_kernels:
         return section in kernel_sections
     if args.only_reorder_analysis:
@@ -1317,13 +1515,13 @@ def main():
     args = parse_args()
 
     # Resolve perm_type pipeline
-    perm_type_filter = 'ROW' if args.row else 'SYMMETRIC'
+    perm_type_filter = 'ROW' if args.row else ('ASYMMETRIC' if args.asymmetric else 'SYMMETRIC')
     pipeline_key = ('random_' if args.random else '') + perm_type_filter.lower()
 
     # Apply --random defaults (before any other processing)
     if args.out is None:
         data_label = 'random' if args.random else 'original'
-        perm_label = 'row' if args.row else 'symmetric'
+        perm_label = perm_type_filter.lower()
         args.out = f"plots/{data_label}_{perm_label}"
 
     # Validate mutually exclusive options (only matters for legacy flags)
@@ -1409,6 +1607,13 @@ def main():
         print("Generating performance profile plots...")
         print("="*60)
         generate_profile_plots(df_analysis, out_dir)
+
+    if _should_run('pareto', args):
+        print("\n" + "="*60)
+        print("Generating Pareto density-vs-time plots...")
+        print("="*60)
+        generate_pareto_plots(df_analysis, out_dir, reordering_csv=_reordering_csv(),
+                              args=args)
 
     if _should_run('aggregate-improvement', args):
         print("\n" + "="*60)

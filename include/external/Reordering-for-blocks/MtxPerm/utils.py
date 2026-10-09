@@ -15,7 +15,10 @@ def load_permutation_file(perm_path, perm_type='ROW'):
         perm_type: Type of permutation:
             'ROW' - single line with row permutation (only permute rows)
             'SYMMETRIC' - single line, apply to both rows and cols (requires square matrix)
-            'ASYMMETRIC' - two lines: first=rows, second=cols
+            'ASYMMETRIC' - two lines: first=rows, second=cols. A single-line
+                file is also accepted and treated as row-only (columns are
+                left untouched), so row-only reorderings can be evaluated in
+                the ASYMMETRIC pipeline next to genuinely two-sided perms.
     
     Returns:
         Tuple of (row_perm, col_perm) as numpy arrays (0-indexed), or (perm, None) for ROW
@@ -34,10 +37,13 @@ def load_permutation_file(perm_path, perm_type='ROW'):
         perm = np.fromstring(lines[0], sep=' ', dtype=np.int64) - 1
         return perm, perm.copy()  # Return copy to avoid aliasing
     elif perm_type == 'ASYMMETRIC':
-        # Two permutations - read both lines
-        if len(lines) < 2:
-            raise ValueError(f"ASYMMETRIC permutation requires 2 lines, found {len(lines)}")
+        # Two permutations - read both lines.
+        # A single-line file is accepted as a row-only permutation (columns
+        # are left untouched), so row-only reorderings can be evaluated in
+        # the ASYMMETRIC pipeline.
         row_perm = np.fromstring(lines[0], sep=' ', dtype=np.int64) - 1
+        if len(lines) < 2:
+            return row_perm, None
         col_perm = np.fromstring(lines[1], sep=' ', dtype=np.int64) - 1
         return row_perm, col_perm
     else:

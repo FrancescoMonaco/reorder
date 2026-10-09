@@ -28,7 +28,8 @@ def load_permutation_file(perm_path, perm_type='SYMMETRIC'):
         perm_type: Type of permutation:
             'ROW' - single line with row permutation (only permute rows)
             'SYMMETRIC' - single line, apply to both rows and cols
-            'ASYMMETRIC' - two lines: first=rows, second=cols
+            'ASYMMETRIC' - two lines: first=rows, second=cols (a single-line
+                file is accepted and treated as row-only)
     
     Returns:
         Tuple of (row_perm, col_perm) as numpy arrays (0-indexed)
@@ -45,9 +46,11 @@ def load_permutation_file(perm_path, perm_type='SYMMETRIC'):
         perm = np.fromstring(lines[0], sep=' ', dtype=np.int64) - 1
         return perm, perm.copy()
     elif perm_type == 'ASYMMETRIC':
-        if len(lines) < 2:
-            raise ValueError(f"ASYMMETRIC permutation requires 2 lines, found {len(lines)}")
+        # Two lines: row perm, then col perm. A single-line file is accepted
+        # as row-only (columns left untouched).
         row_perm = np.fromstring(lines[0], sep=' ', dtype=np.int64) - 1
+        if len(lines) < 2:
+            return row_perm, None
         col_perm = np.fromstring(lines[1], sep=' ', dtype=np.int64) - 1
         return row_perm, col_perm
     else:
