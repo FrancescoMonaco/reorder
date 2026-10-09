@@ -22,22 +22,32 @@ add_compile_options(-Wall -Wextra -Wno-noexcept-type -Wno-implicit-fallthrough -
 add_compile_options(-O3 -g -march=native) #-mavx2 -mfma)
 
 find_package(OpenMP)
-if (OpenMP_FOUND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
 
-find_package(icecream-cpp)
+# Prefer a system Icecream; otherwise use the vendored copy (works locally and
+# on clusters with no package install).
+find_package(icecream-cpp QUIET)
+if(NOT icecream-cpp_FOUND)
+  add_subdirectory(include/external/icecream-cpp)
+  if(NOT TARGET icecream-cpp::icecream-cpp)
+    add_library(icecream-cpp::icecream-cpp ALIAS icecream-cpp)
+  endif()
+endif()
 
 include_directories("include")
 include_directories("include/external/icecream-cpp")
 
 add_executable(reorder test/reorder_test.cpp)
 target_link_libraries(reorder PRIVATE icecream-cpp::icecream-cpp)
+if (OpenMP_FOUND)
+  target_link_libraries(reorder PRIVATE OpenMP::OpenMP_CXX)
+endif()
+# Lets the driver locate datasets/ regardless of launch directory.
+target_compile_definitions(reorder PRIVATE "REORDER_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}\"")
 
 
 ###############################################################################
 # Python Bindings
-# 
+#
 # This cmake code is adapted from
 # - https://nanobind.readthedocs.io/en/latest/building.html
 # - https://nanobind.readthedocs.io/en/latest/packaging.html
@@ -50,18 +60,33 @@ find_package(Python 3.12
   REQUIRED COMPONENTS Interpreter Development.Module
   OPTIONAL_COMPONENTS Development.SABIModule)
 
-# Detect the installed nanobind package and import it into CMake
+# Prefer a pip/conda-installed nanobind (typical local env); otherwise fetch
+# a known-good release (typical cluster modules without nanobind).
 execute_process(
   COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
-  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
-find_package(nanobind CONFIG REQUIRED)
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT
+  RESULT_VARIABLE nanobind_RESULT
+  ERROR_QUIET)
+
+if(nanobind_RESULT EQUAL 0 AND nanobind_ROOT)
+  find_package(nanobind CONFIG REQUIRED)
+else()
+  message(STATUS "nanobind not found via Python; fetching with FetchContent")
+  FetchContent_Declare(
+    nanobind
+    GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+    GIT_TAG        v2.7.0
+    GIT_SHALLOW    TRUE)
+  FetchContent_MakeAvailable(nanobind)
+endif()
 
 nanobind_add_module(_reorder_impl NOMINSIZE NB_STATIC python/wrapper.cpp)
-target_link_libraries(_reorder_impl PRIVATE)
+if (OpenMP_FOUND)
+  target_link_libraries(_reorder_impl PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
-# --- NEW: AUTOMATICALLY COPY TO THE PYTHON SCRIPT FOLDER ---
-# This forces the compiled .so/.pyd to be created directly in your source tree (e.g. inside CLUB)
-# so python reorder.py can immediately import it without any copying.
+# Place the compiled extension next to the Python entrypoint so
+# `from CLUB._reorder_impl import ...` works after build.
 set_target_properties(_reorder_impl PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/CLUB"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/CLUB" # For Windows DLLs/.pyd
@@ -76,24 +101,19 @@ find_program(CLANG_FORMAT_BIN NAMES clang-format)
 
 if(CLANG_FORMAT_BIN)
     # Gather all C++ source and header files (excluding external libraries)
-    file(GLOB_RECURSE SRC_FILES 
+    file(GLOB_RECURSE SRC_FILES
         "include/club/*.hpp"
         "python/*.cpp"
         "test/*.cpp"
     )
 
-    # Create a custom target that runs clang-format on the files
+    # Standalone (`--target format`); never a build dependency.
     add_custom_target(
         format
         COMMAND ${CLANG_FORMAT_BIN} -i ${SRC_FILES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Running clang-format on source files..."
     )
-
-    # Make build targets depend on the format target 
-    # so it runs BEFORE they compile
-    add_dependencies(reorder format)
-    add_dependencies(_reorder_impl format)
 else()
     message(WARNING "clang-format not found. Auto-formatting is disabled.")
 endif()
