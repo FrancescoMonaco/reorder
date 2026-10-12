@@ -1,0 +1,216 @@
+variables:
+  mtx: '/data/matrices/datasets/ai_matrices.txt'
+preprocess: |
+    micromamba activate reorder_env
+
+# NOTE (AI matrices):
+#   * Every step of every approach is wrapped in `timeout 30m` to impose a hard
+#     30-minute wall-clock bound, because the SPRINkLE AI matrices can be large.
+#     A timed-out run exits with code 124, which SbatchMan records as FAILED.
+#   * The base random1D scramble is applied with `--perm-type ROW` (NOT the
+#     SYMMETRIC used for the square SuiteSparse set): ~98% of the AI matrices
+#     are NON-SQUARE, and a SYMMETRIC permutation is only defined for square
+#     matrices (MtxPerm/utils.py raises for m != n). random1D is a row
+#     permutation, so ROW is the correct, always-valid choice here.
+#   * Each command ends with `rc=$?; rm -f $temp_mtx; (exit $rc)` so the exit
+#     code of the timed algorithm (124 on timeout) is what SbatchMan records,
+#     while the temp matrix is always cleaned up. (The plain `; rm -f ...` used
+#     previously masked failures because `rm` returns 0.)
+#
+# DEPENDENCY: this file consumes the base scramble from
+#   /data/matrices/perms/random1D/$mtx_name.perm
+# which is produced by the `random1D` job in perms_ai.yaml. Run perms_ai.yaml
+# (at least its random1D job) BEFORE launching this file.
+jobs:
+  # - config: "perm"
+  #   config_jobs:
+
+  #     - tag: "GROOT_reorder_RANDOM"
+  #       preprocess: |
+  #         source include/external/Reordering-for-blocks/MtxPerm/GROOT/groot_preprocess.sh
+  #         mtx_name=$(basename {mtx} .mtx)
+  #         mkdir -p /data/matrices/perms_random/GROOT_reorder
+  #         perm_path=/data/matrices/perms_random/GROOT_reorder/$mtx_name.perm
+  #       command: >
+  #         temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+  #         timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+  #         --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+  #         timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/GROOT/reorder.py $temp_mtx $perm_path;
+  #         rc=$?; rm -f $temp_mtx; (exit $rc)
+
+  - config: "perm"
+    config_jobs:
+
+      - tag: "random1D_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/random1D
+          perm_path=/data/matrices/perms_random/random1D/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_1d.py $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "CLUB_reorder_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/CLUB_reorder
+          perm_path=/data/matrices/perms_random/CLUB_reorder/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py $temp_mtx $perm_path  --technique seed-refine --w 32 --L 256 --stride-s 256 --max-iters 4 --block-size 32;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      # - tag: "CLUB_jaccard_RANDOM"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p /data/matrices/perms_random/CLUB_jaccard
+      #     perm_path=/data/matrices/perms_random/CLUB_jaccard/$mtx_name.perm
+      #   command: >
+      #     temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+      #     timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+      #     --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+      #     timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py $temp_mtx $perm_path;
+      #     rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      # - tag: "SPARTA_reorder_RANDOM"  # disabled - binary missing (see reorder.py default MtxPerm/SPARTA/repo/...)
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p /data/matrices/perms_random/SPARTA_reorder
+      #     perm_path=/data/matrices/perms_random/SPARTA_reorder/$mtx_name.perm
+      #   command: >
+      #     temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+      #     timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+      #     --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+      #     timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/SPARTA/reorder.py $temp_mtx $perm_path --block-size 32 --tau 0.5;
+      #     rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_degree_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_degree
+          perm_path=/data/matrices/perms_random/SB_degree/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_degree_permutation.py $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_gray_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_gray
+          perm_path=/data/matrices/perms_random/SB_gray/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/gray_perm $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_rcm_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_rcm
+          perm_path=/data/matrices/perms_random/SB_rcm/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RCM/rcm_perm.py $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      # - tag: "SB_metis_RANDOM"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p /data/matrices/perms_random/SB_metis
+      #     perm_path=/data/matrices/perms_random/SB_metis/$mtx_name.perm
+      #   command: >
+      #     temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+      #     timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+      #     --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+      #     timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/metis_part_perm $temp_mtx $perm_path --nparts 64;
+      #     rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_amd_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_amd
+          perm_path=/data/matrices/perms_random/SB_amd/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/amd_perm $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_rabbit_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_rabbit
+          perm_path=/data/matrices/perms_random/SB_rabbit/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/rabbit_perm $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_patoh_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_patoh
+          perm_path=/data/matrices/perms_random/SB_patoh/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/patoh_perm $temp_mtx $perm_path --nparts 128;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      - tag: "SB_slashburn_RANDOM"
+        preprocess: |
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/SB_slashburn
+          perm_path=/data/matrices/perms_random/SB_slashburn/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/slashburn_perm $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+      # - tag: "ACCORDER_reorder_RANDOM"  # disabled
+      #   preprocess: |
+      #     source include/external/Reordering-for-blocks/MtxPerm/ACCORDER/accorder_preprocess.sh
+      #     mtx_name=$(basename {mtx} .mtx)
+      #     mkdir -p /data/matrices/perms_random/ACCORDER_reorder
+      #     perm_path=/data/matrices/perms_random/ACCORDER_reorder/$mtx_name.perm
+      #   command: >
+      #     temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+      #     timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+      #     --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+      #     timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/ACCORDER/build/accorder_perm $temp_mtx $perm_path;
+      #     rc=$?; rm -f $temp_mtx; (exit $rc)
+
+  - config: "gpu"
+    config_jobs:
+      - tag: "TCA_reorder_RANDOM"
+        preprocess: |
+          source include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/tca_preprocess.sh
+          mtx_name=$(basename {mtx} .mtx)
+          mkdir -p /data/matrices/perms_random/TCA_reorder
+          perm_path=/data/matrices/perms_random/TCA_reorder/$mtx_name.perm
+        command: >
+          temp_mtx=$(mktemp /tmp/pre_perm_XXXXXX.mtx) &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/pre_permute.py {mtx} $temp_mtx
+          --perm /data/matrices/perms/random1D/$mtx_name.perm --perm-type ROW &&
+          timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/reorder.py $temp_mtx $perm_path;
+          rc=$?; rm -f $temp_mtx; (exit $rc)
+
+
