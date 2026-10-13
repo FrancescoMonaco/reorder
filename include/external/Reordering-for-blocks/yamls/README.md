@@ -102,30 +102,58 @@ python include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py \
 # add --row-only for a single-line (row-only) permutation
 ```
 
+## Choosing a matrix suite (`--ai` / `--extended` / `--standard`)
+
+Every experiment YAML declares **all** of its matrix suites in a single `mtx`
+`map`, keyed by a `suite` variable. This requires **SbatchMan >= 2.0**. The suite is chosen at launch time with the
+`scripts/launch.py` wrapper:
+
+`--ai`, `--extended`, `--standard` define different sets of matrices:
+
+The suites map to these list files:
+
+| Suite     | List file                          | Matrices |
+|-----------|------------------------------------|----------|
+| `ai`      | `ai_matrices.txt`                  | 1045     |
+| `extended`| `matrices_extended.txt`            | 389      |
+| `standard`| `matrices_list_filtered.txt`       | 52       |
+
+`scripts/launch.py --<suite>` is sugar for sbatchman's `--variable` filter, so
+the same selection can be done directly:
+
+```bash
+sbatchman launch -f include/external/Reordering-for-blocks/yamls/perms_random_ai.yaml \
+    -v suite=ai --dry-run
+
+
 ## YAML Structure Pattern
 
 ```yaml
 variables:
-  mtx: 'datasets/matrices_list_mtx.txt'  # List of matrix paths
+  suite: [ai, extended, standard]        # Matrix suite selector
+  mtx:                                   # One list file per suite
+    map:
+      ai: /data/matrices/datasets/ai_matrices.txt
+      extended: /data/matrices/datasets/matrices_extended.txt
+      standard: /data/matrices/datasets/matrices_list_filtered.txt
   perm: [SB_rcm, SB_degree, ...]         # Permutation algorithms
   n_cols: [32, 256, 1024]                # Dense matrix widths
   block_size: [32]                       # BSR block size
 
 preprocess: |
-  source ~/.venv/bin/activate
-  mtx_name=$(basename {mtx} .mtx)
-  module load CUDA/
+  micromamba activate reorder_env
+  mtx_name=$(basename {mtx[suite]} .mtx)
 
 jobs:
   - config: "gpu"
     config_jobs:
       - tag: "KERNEL_NAME"
-        command: "python3 operators/kernel.py {mtx} --args"
+        command: "python3 operators/kernel.py {mtx[suite]} --args"
 ```
 
 ## Variable Expansion
 
-- `{mtx}`: Expands to each matrix path from file list
+- `{mtx[suite]}`: Expands to each matrix path from the suite's list file
 - `{perm}`: Expands to each permutation algorithm
 - `{n_cols}`: Expands to each dense matrix width
 - `$mtx_name`: Shell variable set in preprocess

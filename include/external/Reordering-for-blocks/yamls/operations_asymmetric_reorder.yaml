@@ -12,7 +12,15 @@
 # block_size + n_cols).
 # =============================================================================
 variables:
-  mtx: '/data/matrices/datasets/matrices_list_filtered.txt'
+  suite:
+    - ai
+    - extended
+    - standard
+  mtx:
+    map:
+      ai: /data/matrices/datasets/ai_matrices.txt
+      extended: /data/matrices/datasets/matrices_extended.txt
+      standard: /data/matrices/datasets/matrices_list_filtered.txt
   perm:
     - random1D
     - SB_amd
@@ -35,7 +43,7 @@ variables:
 
 preprocess: |
   micromamba activate reorder_env
-  mtx_name=$(basename {mtx} .mtx)
+  mtx_name=$(basename {mtx[suite]} .mtx)
 
 
 jobs:
@@ -43,36 +51,36 @@ jobs:
     config_jobs:
 
       - tag: "ASPT_SPMM_ASYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/operators/aspt_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/aspt_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
 
       - tag: "CUSPARSE_SPMM_BSR_ASYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ASYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ASYMMETRIC --n-cols {n_cols}"
 
       - tag: "CUSPARSE_SPMM_CSR_ASYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
 
       - tag: "SMAT_SPMM_ASYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/operators/smat_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ASYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/smat_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ASYMMETRIC --n-cols {n_cols}"
 
       - tag: "ACCSPMM_SPMM_ASYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/operators/accspmm_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
+        command: "python3 include/external/Reordering-for-blocks/operators/accspmm_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
 
       - tag: "DTC_SPMM_ASYMMETRIC"
         preprocess: |
           source include/external/Reordering-for-blocks/operators/dtc_preprocess.sh
-          mtx_name=$(basename {mtx} .mtx)
-        command: "python3 include/external/Reordering-for-blocks/operators/dtc_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols} --n-iterations 1"
+          mtx_name=$(basename {mtx[suite]} .mtx)
+        command: "python3 include/external/Reordering-for-blocks/operators/dtc_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols} --n-iterations 1"
 
       - tag: "FLASHSPARSE_SPMM_ASYMMETRIC"
         preprocess: |
           source include/external/Reordering-for-blocks/operators/flashsparse_preprocess.sh
-          mtx_name=$(basename {mtx} .mtx)
-        command: "python3 include/external/Reordering-for-blocks/operators/flashsparse_spmm.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
+          mtx_name=$(basename {mtx[suite]} .mtx)
+        command: "python3 include/external/Reordering-for-blocks/operators/flashsparse_spmm.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-cols {n_cols}"
 
       # - tag: "CUSPARSE_SPMV_BSR_ASYMMETRIC"  # disabled
-      #   command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmv.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ASYMMETRIC"
+      #   command: "python3 include/external/Reordering-for-blocks/operators/cusparse_bsr_spmv.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --blocksize {block_size} --perm-type ASYMMETRIC"
       # - tag: "CUSPARSE_SPMV_CSR_ASYMMETRIC"  # disabled
-      #   command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmv.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC"
+      #   command: "python3 include/external/Reordering-for-blocks/operators/cusparse_csr_spmv.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC"
 
       # - tag: "BLEST_BFS_ASYMMETRIC"  # disabled
-      #   command: "python3 include/external/Reordering-for-blocks/operators/blest_bfs.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-sources 64"
+      #   command: "python3 include/external/Reordering-for-blocks/operators/blest_bfs.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --n-sources 64"

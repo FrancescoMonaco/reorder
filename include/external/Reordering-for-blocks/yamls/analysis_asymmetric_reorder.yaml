@@ -13,7 +13,15 @@
 # SYMMETRIC rows).
 # =============================================================================
 variables:
-  mtx: '/data/matrices/datasets/matrices_extended.txt'
+  suite:
+    - ai
+    - extended
+    - standard
+  mtx:
+    map:
+      ai: /data/matrices/datasets/ai_matrices.txt
+      extended: /data/matrices/datasets/matrices_extended.txt
+      standard: /data/matrices/datasets/matrices_list_filtered.txt
   perm:
     - SB_gray
     - random1D
@@ -32,10 +40,10 @@ variables:
 
 preprocess: |
   micromamba activate reorder_env
-  mtx_name=$(basename {mtx} .mtx)
+  mtx_name=$(basename {mtx[suite]} .mtx)
 
 jobs:
   - config: "perm"
     config_jobs:
       - tag: "ANALYSIS_ASYMMETRIC"
-        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --block-sizes 4 8 16 32 64 128"
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/ANALYSIS/analyze.py {mtx[suite]} --perm /data/matrices/perms/{perm}/$mtx_name.perm --perm-type ASYMMETRIC --block-sizes 4 8 16 32 64 128"
