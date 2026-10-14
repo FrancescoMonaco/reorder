@@ -20,8 +20,6 @@ variables:
     - SB_slashburn
     - GROOT_reorder
     - CLUB_reorder
-    # Two-line ASYMMETRIC .perm; ROW mode reads line 1 (row perm) only.
-    - CLUB_jaccard
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
 

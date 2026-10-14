@@ -9,26 +9,32 @@
 # ===========================================================================
 
 # ---- Data Paths -----------------------------------------------------------
+# Target the LIVE results at the repository root (SPRINkLE dataset, 1045 matrices).
+# Absolute paths so they resolve regardless of the CWD plot.py is launched from.
 data:
-  operations_csv: "results/results_operations.csv"
-  analysis_csv: "results/results_analysis.csv"
-  reordering_csv: "results/results_reordering.csv"
+  operations_csv: "/home/francescopio.monaco/reorder/results/results_operations.csv"
+  analysis_csv: "/home/francescopio.monaco/reorder/results/results_analysis.csv"
+  reordering_csv: "/home/francescopio.monaco/reorder/results/results_reordering.csv"
   matrices_list: "datasets/matrices_list_filtered.txt"
 
 # Random-pipeline data paths (used when --random is passed).
 data_random:
-  operations_csv: "results/results_operations_random.csv"
-  analysis_csv: "results/results_analysis_random.csv"
-  reordering_csv: "results/results_reordering_random.csv"
+  operations_csv: "/home/francescopio.monaco/reorder/results/results_operations_random.csv"
+  analysis_csv: "/home/francescopio.monaco/reorder/results/results_analysis_random.csv"
+  reordering_csv: "/home/francescopio.monaco/reorder/results/results_reordering_random.csv"
   matrices_list: "datasets/matrices_list_filtered.txt"
 
 # ---- Filtering ------------------------------------------------------------
+# Target dataset is SPRINkLE (live results/): keep the FULL set of matrices.
 filters:
   # Keep only one matrix per SuiteSparse family (reduces redundancy).
-  one_per_family: true
+  # false → use ALL families (SPRINkLE matrices are not in any matrices list,
+  # so one_per_family would drop them all).
+  one_per_family: false
 
   # Keep only square matrices (rows == cols).
-  square_only: true
+  # false → include rectangular matrices (SPRINkLE conv/linear layers).
+  square_only: false
 
   # Minimum number of rows. Set to null to disable.
   min_size: 0
@@ -38,15 +44,15 @@ filters:
   max_size: null  # no upper bound — needed for large matrices (10^6–10^8 nnz)
 
   # Remove matrices whose original bandwidth is below this threshold
-  # (trivially banded). Set to null to disable.
-  min_bandwidth: 2          # e.g. 5
+  # (trivially banded). Set to null to disable. (null → keep everything)
+  min_bandwidth: null          # e.g. 5
 
   # Remove very sparse matrices where nnz < factor * rows.
-  # Set to null to disable.
-  max_sparsity_factor: 1.5       # 2
+  # Set to null to disable. (null → keep everything)
+  max_sparsity_factor: null       # 2
 
   # Remove purely diagonal matrices (nnz == rows for square matrices).
-  filter_diagonal: true
+  filter_diagonal: false
 
   # Permutations (reordering algorithms) to exclude from ALL pipelines.
   # Flat list only.  Per-pipeline exclusions go in the `pipelines` section.

@@ -1,0 +1,21 @@
+variables:
+  suite:
+    - ai
+    - extended
+    - standard
+  mtx:
+    map:
+      ai: /data/matrices/datasets/ai_matrices.txt
+      extended: /data/matrices/datasets/matrices_extended.txt
+      standard: /data/matrices/datasets/matrices_list_filtered.txt
+preprocess: |
+  micromamba activate reorder_env
+
+jobs:
+  - config: "perm"
+    config_jobs:
+      - tag: "matrix_features"
+        preprocess: |
+          mtx_name=$(basename {mtx[suite]} .mtx)
+          mkdir -p /data/matrices/features
+        command: "python3 scripts/matrix_features.py {mtx[suite]} --out /data/matrices/features/$mtx_name.csv"

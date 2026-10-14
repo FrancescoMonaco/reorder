@@ -1,11 +1,10 @@
 # =============================================================================
-# ASYMMETRIC (two-sided) SpMM benchmarks: A' = P_row * A * P_col^T.
+# ASYMMETRIC SpMM benchmarks: A' = P_row * A * P_col^T.
 #
-#  * CLUB_jaccard produces TWO-line .perm files (row perm / col perm).
-#  * All other algorithms produce SINGLE-line .perm files; the ASYMMETRIC
-#    loader treats those as row-only (columns untouched), so their ROW
-#    results are reproduced here under perm_type == 'ASYMMETRIC' and can be
-#    compared directly against CLUB_jaccard.
+#  * All algorithms produce SINGLE-line .perm files; the ASYMMETRIC loader
+#    treats those as row-only (columns untouched), so their ROW results are
+#    reproduced here under perm_type == 'ASYMMETRIC' and can be compared
+#    directly against each other.
 #
 # Results land in results/results_operations.csv with
 # perm_type == 'ASYMMETRIC' (keyed by matrix + perm + perm_type + algo +
@@ -33,7 +32,6 @@ variables:
     - SB_slashburn
     - GROOT_reorder
     - CLUB_reorder
-    - CLUB_jaccard
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
   block_size:

@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+.vscode/
 
 # Compiled Object files
 *.slo
@@ -74,6 +75,7 @@ Makefile*
 *.gz
 
 *.perm
+*.pyc
 SbatchMan/
 boost_1_89_0/
 boost_1_79_0/

@@ -1,12 +1,10 @@
 # =============================================================================
-# ASYMMETRIC (two-sided) reordering analysis.
+# ASYMMETRIC reordering analysis.
 #
-#  * CLUB_jaccard writes a TWO-line .perm (row perm / col perm) -> both lines
-#    are applied: A' = P_row * A * P_col^T.
-#  * Every other algorithm writes a SINGLE-line .perm; the ASYMMETRIC loader
-#    accepts it as a row-only permutation (columns untouched), so the
-#    row-only baselines can be compared in the same table, evaluated with
-#    exactly the same code path as CLUB_jaccard.
+#  * Every algorithm here writes a SINGLE-line .perm; the ASYMMETRIC loader
+#    accepts it as a row-only permutation (columns untouched), so all the
+#    row-only baselines are compared in the same table, evaluated with exactly
+#    the same code path.
 #
 # Results land in results/results_analysis.csv with perm_type == 'ASYMMETRIC'
 # (keyed by matrix + perm + perm_type, so they coexist with the ROW and
@@ -34,7 +32,6 @@ variables:
     - SB_slashburn
     - GROOT_reorder
     - CLUB_reorder
-    - CLUB_jaccard
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
 
