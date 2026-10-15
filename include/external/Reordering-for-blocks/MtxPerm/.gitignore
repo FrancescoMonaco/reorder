@@ -28,6 +28,11 @@ GROOT/kgraph_install/
 GROOT/boost_local/
 GROOT/knn_cache/
 
+# Mt-KaHyPar build artifacts and local install
+KAHYPAR/mt-kahypar/
+KAHYPAR/mt-kahypar-install/
+KAHYPAR/build/
+
 # PaToH build artifacts
 SPARSEBASE/patoh_build/
 SPARSEBASE/patoh_install/

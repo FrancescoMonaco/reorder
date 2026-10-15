@@ -29,7 +29,7 @@ perms:
     type: symmetric|asymmetric|row
 ```
 
-Algorithms defined: `identity`, `random1D`, `random2D`, `SB_rcm`, `SB_degree`, `SB_gray`, `SB_amd`, `SB_metis`, `SB_rabbit`, `SB_slashburn`, `SB_patoh`, `SPARTA_reorder`, `GROOT_reorder`, `TCA_reorder`, `CLUB_reorder`
+Algorithms defined: `identity`, `random1D`, `random2D`, `SB_rcm`, `SB_degree`, `SB_gray`, `SB_amd`, `SB_metis`, `SB_rabbit`, `SB_slashburn`, `SB_patoh`, `SPARTA_reorder`, `GROOT_reorder`, `KAHYPAR_reorder`, `TCA_reorder`, `CLUB_reorder`
 
 ### Permutation file shape vs. perm_type
 

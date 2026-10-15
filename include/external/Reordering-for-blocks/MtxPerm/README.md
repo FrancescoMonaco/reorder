@@ -71,6 +71,27 @@ cd MtxPerm/GROOT && ./install.sh
 python3 MtxPerm/GROOT/reorder.py input.mtx output.perm
 ```
 
+### KAHYPAR/
+
+Interface to Mt-KaHyPar (multi-threaded Karlsruhe hypergraph partitioner).
+
+**Algorithm:**
+- `KAHYPAR_reorder` - multilevel graph partitioning; orders vertices by their
+  partition block for a block-diagonal layout (like `SB_metis`/`SB_patoh`).
+  Requires a square matrix.
+
+**Prerequisites:** CMake >= 3.20, C++20 compiler, TBB, hwloc, Boost
+
+**Install:**
+```bash
+cd MtxPerm/KAHYPAR && ./install.sh
+```
+
+**Usage:**
+```bash
+./MtxPerm/KAHYPAR/build/kahypar_perm input.mtx output.perm --nparts 128
+```
+
 ### ANALYSIS/
 
 Matrix structure analysis tools (not permutation generation).

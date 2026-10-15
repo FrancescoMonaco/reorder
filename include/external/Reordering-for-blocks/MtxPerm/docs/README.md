@@ -17,6 +17,7 @@ Detailed documentation for each sparse matrix reordering algorithm implemented i
 |-----------|------|----------|:-:|------------------------|
 | [METIS](METIS.md) | `SPARSEBASE/src/metis_part_perm.cpp` | Graph partitioning | Yes | Block-diagonal structure |
 | [PaToH](PaToH.md) | `SPARSEBASE/src/patoh_perm.cpp` | Hypergraph partitioning | No | Communication volume / x-vector reuse |
+| [Mt-KaHyPar](KAHYPAR.md) | `KAHYPAR/kahypar_perm.cpp` | Multilevel graph partitioning | Yes | Block-diagonal structure |
 
 ## Community / Cache-Aware Reorderings
 

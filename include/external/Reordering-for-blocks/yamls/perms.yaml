@@ -103,6 +103,17 @@ jobs:
           perm_path=/data/matrices/perms/SB_slashburn/$mtx_name.perm
         command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/slashburn_perm {mtx[suite]} $perm_path"
 
+      # Mt-KaHyPar partitioning: order vertices by their partition block to
+      # obtain a block-diagonal layout (like SB_metis / SB_patoh). Requires a
+      # square matrix.
+      - tag: "KAHYPAR_reorder"
+        preprocess: |
+          source include/external/Reordering-for-blocks/MtxPerm/KAHYPAR/kahypar_preprocess.fish
+          mtx_name=$(basename {mtx[suite]} .mtx)
+          mkdir -p /data/matrices/perms/KAHYPAR_reorder
+          perm_path=/data/matrices/perms/KAHYPAR_reorder/$mtx_name.perm
+        command: "./include/external/Reordering-for-blocks/MtxPerm/KAHYPAR/build/kahypar_perm {mtx[suite]} $perm_path --nparts 128"
+
       # Row-only CLUB (hybrid): IDF-filtered MinHash micro-clustering +
       # weighted bipartite macro-RCM + SIMD Jaccard slab packing, then always
       # apply the permutation. Single-line row perm (new -> original row).

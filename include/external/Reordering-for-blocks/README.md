@@ -62,6 +62,7 @@ This repository systematically:
 - **[MtxPerm/RANDOM/](MtxPerm/RANDOM/)** - GraphBLAS random permutations
 - **[MtxPerm/SPARTA/](MtxPerm/SPARTA/)** - SPARTA blocking algorithm
 - **[MtxPerm/GROOT/](MtxPerm/GROOT/)** - Groot graph-centric row reordering (EuroSys'25)
+- **[MtxPerm/KAHYPAR/](MtxPerm/KAHYPAR/)** - Mt-KaHyPar multilevel graph partitioning reordering
 - **[MtxPerm/ANALYSIS/](MtxPerm/ANALYSIS/)** - Matrix structure analysis
 - **[MtxPerm/pre_permute.py](MtxPerm/pre_permute.py)** - Pre-permute a matrix and write new `.mtx` (used by random-base experiments)
 
@@ -79,6 +80,8 @@ Defined in [yamls/perms.yaml](yamls/perms.yaml):
 | `SB_gray` | Gray code reordering |
 | `SB_amd` | Approximate Minimum Degree |
 | `SB_metis` | METIS graph partitioning |
+| `SB_patoh` | PaToH hypergraph partitioning |
+| `KAHYPAR_reorder` | Mt-KaHyPar multilevel graph partitioning |
 | `SB_rabbit` | Rabbit reordering |
 | `SB_slashburn` | SlashBurn algorithm |
 | `SPARTA_reorder` | Sparse blocking for tensor cores |

@@ -18,6 +18,7 @@ variables:
     - SB_rabbit
     - SB_patoh
     - SB_slashburn
+    - KAHYPAR_reorder
     - CLUB_reorder
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
