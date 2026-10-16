@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "club/halo.hpp"
 #include "club/reorder.hpp"
 
 namespace nb = nanobind;
@@ -105,6 +106,63 @@ static std::vector<size_t> hybrid_from_mtx( const std::string& mtx_path,
 }
 
 // ---------------------------------------------------------------------------
+// halo_from_mtx(path, b, K, W, lambda, hub_frac) -> dict
+//
+// Load a Matrix Market file, run the full rectangular HALO pipeline
+// (adaptive hub peel -> OPMH sketch -> parallel radix -> guarded SPA pack,
+// columns first then rows), and return {"row_perm": [...], "col_perm": [...]}
+// mapping new position -> original index.
+// ---------------------------------------------------------------------------
+static nb::dict halo_from_mtx( const std::string& mtx_path,
+                               size_t b,
+                               size_t K,
+                               size_t W,
+                               double lambda,
+                               double hub_frac ) {
+    std::ifstream infile( mtx_path );
+    if ( !infile.is_open() ) {
+        throw std::runtime_error( "Failed to open file: " + mtx_path );
+    }
+
+    club::CSR<float, int> A;
+    A.read_from_mtx( infile );
+    infile.close();
+
+    if ( A.rows == 0 ) {
+        throw std::runtime_error( "Matrix has zero rows or failed to parse: " + mtx_path );
+    }
+
+    club::halo::Params p;
+    p.b = b;
+    p.K = K;
+    p.W = W;
+    p.lambda = lambda;
+    p.hub_frac = hub_frac;
+
+    std::vector<size_t> rp, cp;
+    club::halo::Stats st;
+    if ( A.rows == A.cols ) {
+        // Symmetric PAP^T: col perm == row perm. Mirror it into cp so the
+        // .perm file carries both lines and ASYMMETRIC evaluation applies
+        // both sides (identical to SYMMETRIC for this case).
+        club::halo::reorder_symmetric( A, p, &rp, &st );
+        cp = rp;
+    } else {
+        club::halo::reorder_rectangular( A, p, &rp, &cp, &st );
+    }
+
+    nb::dict out;
+    out["row_perm"] = rp;
+    out["col_perm"] = cp;
+    out["tau_row"] = st.tau_row;
+    out["tau_col"] = st.tau_col;
+    out["n_core_rows"] = st.n_core_rows;
+    out["n_core_cols"] = st.n_core_cols;
+    out["ntiles"] = st.ntiles;
+    return out;
+}
+
+// ---------------------------------------------------------------------------
 // Python module definition
 // ---------------------------------------------------------------------------
 NB_MODULE( _reorder_impl, m ) {
@@ -137,4 +195,15 @@ NB_MODULE( _reorder_impl, m ) {
            "(reorder_hybrid: MinHash micro-clustering + bipartite macro-RCM + "
            "SIMD Jaccard slab packing), and return the row permutation as a "
            "list of 0-based indices." );
+    m.def( "halo",
+           &halo_from_mtx,
+           "mtx_path"_a,
+           "b"_a = 8,
+           "K"_a = 16,
+           "W"_a = 16,
+           "lambda"_a = 0.5,
+           "hub_frac"_a = 0.005,
+           "Load a Matrix Market file, run the full rectangular HALO pipeline "
+           "(adaptive hub peel + OPMH sketch + parallel radix + guarded SPA "
+           "pack, columns then rows), and return row/col perms + stats." );
 }

@@ -1,10 +1,12 @@
 # =============================================================================
 # ASYMMETRIC reordering analysis.
 #
-#  * Every algorithm here writes a SINGLE-line .perm; the ASYMMETRIC loader
+#  * Row-only algorithms write a SINGLE-line .perm; the ASYMMETRIC loader
 #    accepts it as a row-only permutation (columns untouched), so all the
 #    row-only baselines are compared in the same table, evaluated with exactly
 #    the same code path.
+#  * HALO_reorder writes a TWO-line (row, col) perm and is evaluated with
+#    exactly the same ASYMMETRIC loader (both lines applied).
 #
 # Results land in results/results_analysis.csv with perm_type == 'ASYMMETRIC'
 # (keyed by matrix + perm + perm_type, so they coexist with the ROW and
@@ -33,6 +35,7 @@ variables:
     - KAHYPAR_reorder
     - GROOT_reorder
     - CLUB_reorder
+    - HALO_reorder
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
 

@@ -29,13 +29,14 @@ perms:
     type: symmetric|asymmetric|row
 ```
 
-Algorithms defined: `identity`, `random1D`, `random2D`, `SB_rcm`, `SB_degree`, `SB_gray`, `SB_amd`, `SB_metis`, `SB_rabbit`, `SB_slashburn`, `SB_patoh`, `SPARTA_reorder`, `GROOT_reorder`, `KAHYPAR_reorder`, `TCA_reorder`, `CLUB_reorder`
+Algorithms defined: `identity`, `random1D`, `random2D`, `SB_rcm`, `SB_degree`, `SB_gray`, `SB_amd`, `SB_metis`, `SB_rabbit`, `SB_slashburn`, `SB_patoh`, `SPARTA_reorder`, `GROOT_reorder`, `KAHYPAR_reorder`, `TCA_reorder`, `CLUB_reorder`, `HALO_reorder`
 
 ### Permutation file shape vs. perm_type
 
 | File lines | Written by | Evaluate with |
 |------------|-----------|----------------|
 | 1 line (row perm) | every algorithm including `CLUB_reorder` | `--perm-type ROW` (rows) or `SYMMETRIC` (rows+cols, square matrices) |
+| 2 lines (row, col) | `HALO_reorder` | `--perm-type ASYMMETRIC` (both lines applied; row-only files also accepted) |
 
 `CLUB_reorder` runs the **hybrid** pipeline (`reorder.py --technique hybrid`:
 IDF-filtered MinHash micro-clustering + weighted bipartite macro-RCM + SIMD
@@ -43,6 +44,13 @@ Jaccard slab packing) and writes a **single-line row perm**. The `ASYMMETRIC`
 loader accepts single-line files as row-only (columns untouched), so `CLUB_reorder`
 can be dropped into the ASYMMETRIC tables for comparison, evaluated with exactly
 the same code path as the other row-only algorithms.
+
+`HALO_reorder` runs the **HALO** pipeline (`reorder.py --technique halo`:
+adaptive hub peel + OPMH sketch + parallel radix sort + guarded SPA pack,
+columns first then rows) and writes a **two-line (row, col) perm**. It is
+evaluated with `--perm-type ASYMMETRIC` next to `CLUB_reorder`, so the two
+confront each other in the same table: CLUB = row-only hybrid baseline,
+HALO = two-sided successor.
 
 ## Experiment YAMLs
 
@@ -99,6 +107,15 @@ python include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py \
     /data/matrices/datasets/3elt_dual/3elt_dual.mtx /tmp/3elt_dual.perm \
     --technique hybrid --w 4 --w-block 32 --lookahead 64 --hub-frac 0.05
 # (also available: --technique classic [reorder2], --technique multilevel)
+```
+
+To run `HALO_reorder` (two-sided HALO) in a shell yourself:
+
+```bash
+python include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py \
+    /data/matrices/datasets/3elt_dual/3elt_dual.mtx /tmp/3elt_dual.perm \
+    --technique halo --b 8 --k 16 --lookahead 16 --lambda-guard 0.5 --hub-frac 0.005
+# writes a TWO-line (row, col) perm; evaluate with --perm-type ASYMMETRIC
 ```
 
 ## Choosing a matrix suite (`--ai` / `--extended` / `--standard`)

@@ -89,12 +89,12 @@ jobs:
           perm_path=/data/matrices/perms/SB_rabbit/$mtx_name.perm
         command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/rabbit_perm {mtx[suite]} $perm_path"
 
-      - tag: "SB_patoh"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_patoh
-          perm_path=/data/matrices/perms/SB_patoh/$mtx_name.perm
-        command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/patoh_perm {mtx[suite]} $perm_path --nparts 128"
+      # - tag: "SB_patoh"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_patoh
+      #     perm_path=/data/matrices/perms/SB_patoh/$mtx_name.perm
+      #   command: "./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/patoh_perm {mtx[suite]} $perm_path --nparts 128"
 
       - tag: "SB_slashburn"
         preprocess: |
@@ -123,6 +123,16 @@ jobs:
           mkdir -p /data/matrices/perms/CLUB_reorder
           perm_path=/data/matrices/perms/CLUB_reorder/$mtx_name.perm
         command: "python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx[suite]} $perm_path --technique hybrid --w 4 --w-block 32 --lookahead 64 --hub-frac 0.05"
+
+      # Two-sided HALO: adaptive hub peel + OPMH sketch + parallel radix +
+      # guarded SPA pack, columns first then rows. Two-line (row, col) perm
+      # file; evaluated with --perm-type ASYMMETRIC next to CLUB_reorder.
+      - tag: "HALO_reorder"
+        preprocess: |
+          mtx_name=$(basename {mtx[suite]} .mtx)
+          mkdir -p /data/matrices/perms/HALO_reorder
+          perm_path=/data/matrices/perms/HALO_reorder/$mtx_name.perm
+        command: "python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx[suite]} $perm_path --technique halo --b 8 --k 16 --lookahead 16 --lambda-guard 0.5 --hub-frac 0.005"
 
       # - tag: "ACCORDER_reorder"  # disabled
       #   preprocess: |

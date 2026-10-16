@@ -31,40 +31,40 @@ jobs:
   - config: "perm"
     config_jobs:
 
-      - tag: "random1D"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/random1D
-          perm_path=/data/matrices/perms/random1D/$mtx_name.perm
-        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_1d.py {mtx[suite]} $perm_path"
+      # - tag: "random1D"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/random1D
+      #     perm_path=/data/matrices/perms/random1D/$mtx_name.perm
+      #   command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_1d.py {mtx[suite]} $perm_path"
 
-      - tag: "random2D"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/random2D
-          perm_path=/data/matrices/perms/random2D/$mtx_name.perm
-        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_2d.py {mtx[suite]} $perm_path"
+      # - tag: "random2D"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/random2D
+      #     perm_path=/data/matrices/perms/random2D/$mtx_name.perm
+      #   command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_random_permutation_2d.py {mtx[suite]} $perm_path"
 
-      - tag: "SB_degree"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_degree
-          perm_path=/data/matrices/perms/SB_degree/$mtx_name.perm
-        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_degree_permutation.py {mtx[suite]} $perm_path"
+      # - tag: "SB_degree"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_degree
+      #     perm_path=/data/matrices/perms/SB_degree/$mtx_name.perm
+      #   command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RANDOM/GB_degree_permutation.py {mtx[suite]} $perm_path"
 
-      - tag: "SB_gray"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_gray
-          perm_path=/data/matrices/perms/SB_gray/$mtx_name.perm
-        command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/gray_perm {mtx[suite]} $perm_path"
+      # - tag: "SB_gray"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_gray
+      #     perm_path=/data/matrices/perms/SB_gray/$mtx_name.perm
+      #   command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/gray_perm {mtx[suite]} $perm_path"
 
-      - tag: "SB_rcm"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_rcm
-          perm_path=/data/matrices/perms/SB_rcm/$mtx_name.perm
-        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RCM/rcm_perm.py {mtx[suite]} $perm_path"
+      # - tag: "SB_rcm"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_rcm
+      #     perm_path=/data/matrices/perms/SB_rcm/$mtx_name.perm
+      #   command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/RCM/rcm_perm.py {mtx[suite]} $perm_path"
 
       # - tag: "SB_metis"
       #   preprocess: |
@@ -80,33 +80,33 @@ jobs:
       #     perm_path=/data/matrices/perms/SPARTA_reorder/$mtx_name.perm
       #   command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/SPARTA/reorder.py {mtx[suite]} $perm_path --block-size 32 --tau 0.5"
 
-      - tag: "SB_amd"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_amd
-          perm_path=/data/matrices/perms/SB_amd/$mtx_name.perm
-        command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/amd_perm {mtx[suite]} $perm_path"
+      # - tag: "SB_amd"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_amd
+      #     perm_path=/data/matrices/perms/SB_amd/$mtx_name.perm
+      #   command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/amd_perm {mtx[suite]} $perm_path"
 
-      - tag: "SB_rabbit"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_rabbit
-          perm_path=/data/matrices/perms/SB_rabbit/$mtx_name.perm
-        command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/rabbit_perm {mtx[suite]} $perm_path"
+      # - tag: "SB_rabbit"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_rabbit
+      #     perm_path=/data/matrices/perms/SB_rabbit/$mtx_name.perm
+      #   command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/rabbit_perm {mtx[suite]} $perm_path"
 
-      - tag: "SB_patoh"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_patoh
-          perm_path=/data/matrices/perms/SB_patoh/$mtx_name.perm
-        command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/patoh_perm {mtx[suite]} $perm_path --nparts 128"
+      # - tag: "SB_patoh"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_patoh
+      #     perm_path=/data/matrices/perms/SB_patoh/$mtx_name.perm
+      #   command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/patoh_perm {mtx[suite]} $perm_path --nparts 128"
 
-      - tag: "SB_slashburn"
-        preprocess: |
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/SB_slashburn
-          perm_path=/data/matrices/perms/SB_slashburn/$mtx_name.perm
-        command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/slashburn_perm {mtx[suite]} $perm_path"
+      # - tag: "SB_slashburn"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/SB_slashburn
+      #     perm_path=/data/matrices/perms/SB_slashburn/$mtx_name.perm
+      #   command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/SPARSEBASE/build/slashburn_perm {mtx[suite]} $perm_path"
 
       # Mt-KaHyPar partitioning: order vertices by their partition block to
       # obtain a block-diagonal layout (like SB_metis / SB_patoh). Requires a
@@ -119,15 +119,25 @@ jobs:
           perm_path=/data/matrices/perms/KAHYPAR_reorder/$mtx_name.perm
         command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/KAHYPAR/build/kahypar_perm {mtx[suite]} $perm_path --nparts 128"
 
-      # Row-only CLUB (hybrid): IDF-filtered MinHash micro-clustering +
-      # weighted bipartite macro-RCM + SIMD Jaccard slab packing, then always
-      # apply the permutation. Single-line row perm (new -> original row).
-      - tag: "CLUB_reorder"
+      # # Row-only CLUB (hybrid): IDF-filtered MinHash micro-clustering +
+      # # weighted bipartite macro-RCM + SIMD Jaccard slab packing, then always
+      # # apply the permutation. Single-line row perm (new -> original row).
+      # - tag: "CLUB_reorder"
+      #   preprocess: |
+      #     mtx_name=$(basename {mtx[suite]} .mtx)
+      #     mkdir -p /data/matrices/perms/CLUB_reorder
+      #     perm_path=/data/matrices/perms/CLUB_reorder/$mtx_name.perm
+      #   command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx[suite]} $perm_path --technique hybrid --w 4 --w-block 32 --lookahead 64 --hub-frac 0.05"
+
+      # Two-sided HALO: adaptive hub peel + OPMH sketch + parallel radix +
+      # guarded SPA pack, columns first then rows. Two-line (row, col) perm
+      # file; evaluated with --perm-type ASYMMETRIC next to CLUB_reorder.
+      - tag: "HALO_reorder"
         preprocess: |
           mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/CLUB_reorder
-          perm_path=/data/matrices/perms/CLUB_reorder/$mtx_name.perm
-        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx[suite]} $perm_path --technique hybrid --w 4 --w-block 32 --lookahead 64 --hub-frac 0.05"
+          mkdir -p /data/matrices/perms/HALO_reorder
+          perm_path=/data/matrices/perms/HALO_reorder/$mtx_name.perm
+        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/CLUB/reorder.py {mtx[suite]} $perm_path --technique halo --b 8 --k 16 --lookahead 16 --lambda-guard 0.5 --hub-frac 0.005"
 
       # - tag: "ACCORDER_reorder"  # disabled
       #   preprocess: |
@@ -137,13 +147,13 @@ jobs:
       #     perm_path=/data/matrices/perms/ACCORDER_reorder/$mtx_name.perm
       #   command: "timeout 30m ./include/external/Reordering-for-blocks/MtxPerm/ACCORDER/build/accorder_perm {mtx[suite]} $perm_path"
 
-  - config: "gpu"
-    config_jobs:
-      - tag: "TCA_reorder"
-        preprocess: |
-          source include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/tca_preprocess.sh
-          mtx_name=$(basename {mtx[suite]} .mtx)
-          mkdir -p /data/matrices/perms/TCA_reorder
-          perm_path=/data/matrices/perms/TCA_reorder/$mtx_name.perm
-        command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/reorder.py {mtx[suite]} $perm_path"
+  # - config: "gpu"
+  #   config_jobs:
+  #     - tag: "TCA_reorder"
+  #       preprocess: |
+  #         source include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/tca_preprocess.sh
+  #         mtx_name=$(basename {mtx[suite]} .mtx)
+  #         mkdir -p /data/matrices/perms/TCA_reorder
+  #         perm_path=/data/matrices/perms/TCA_reorder/$mtx_name.perm
+  #       command: "timeout 30m python3 include/external/Reordering-for-blocks/MtxPerm/DTC-LSH/reorder.py {mtx[suite]} $perm_path"
 

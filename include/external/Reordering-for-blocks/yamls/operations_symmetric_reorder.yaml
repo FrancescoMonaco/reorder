@@ -22,6 +22,7 @@ variables:
     - GROOT_reorder
     - TCA_reorder
     - CLUB_reorder
+    - HALO_reorder
     # - ACCORDER_reorder  # disabled
   block_size:
     - 32

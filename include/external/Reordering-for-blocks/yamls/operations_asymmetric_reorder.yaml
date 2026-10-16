@@ -1,10 +1,11 @@
 # =============================================================================
 # ASYMMETRIC SpMM benchmarks: A' = P_row * A * P_col^T.
 #
-#  * All algorithms produce SINGLE-line .perm files; the ASYMMETRIC loader
+#  * Row-only algorithms produce SINGLE-line .perm files; the ASYMMETRIC loader
 #    treats those as row-only (columns untouched), so their ROW results are
 #    reproduced here under perm_type == 'ASYMMETRIC' and can be compared
 #    directly against each other.
+#  * HALO_reorder produces TWO-line (row, col) perms; both are applied.
 #
 # Results land in results/results_operations.csv with
 # perm_type == 'ASYMMETRIC' (keyed by matrix + perm + perm_type + algo +
@@ -33,6 +34,7 @@ variables:
     - KAHYPAR_reorder
     - GROOT_reorder
     - CLUB_reorder
+    - HALO_reorder
     - TCA_reorder
     # - ACCORDER_reorder  # disabled
   block_size:

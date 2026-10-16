@@ -21,6 +21,7 @@ variables:
     - KAHYPAR_reorder
     - TCA_reorder
     - CLUB_reorder
+    - HALO_reorder
     # - ACCORDER_reorder  # disabled
 
 preprocess: |

@@ -14,7 +14,10 @@ def load_permutation_file(perm_path, perm_type='ROW'):
         perm_path: Path to permutation file
         perm_type: Type of permutation:
             'ROW' - single line with row permutation (only permute rows)
-            'SYMMETRIC' - single line, apply to both rows and cols (requires square matrix)
+            'SYMMETRIC' - single line (applied to both rows and cols), or two
+                lines (first=rows, second=cols). Requires square matrix.
+                Two-line support lets two-sided algorithms like HALO be
+                evaluated inside the SYMMETRIC tables next to CLUB.
             'ASYMMETRIC' - two lines: first=rows, second=cols. A single-line
                 file is also accepted and treated as row-only (columns are
                 left untouched), so row-only reorderings can be evaluated in
@@ -33,9 +36,17 @@ def load_permutation_file(perm_path, perm_type='ROW'):
         perm = np.fromstring(lines[0], sep=' ', dtype=np.int64) - 1  # Convert to 0-based
         return perm, None
     elif perm_type == 'SYMMETRIC':
-        # Single permutation - apply to both rows and columns (requires square matrix)
+        # Single permutation - apply to both rows and columns (requires square
+        # matrix). A two-line file is also accepted (e.g. HALO on a square
+        # matrix where row and col perms differ): the first line is applied to
+        # rows and the second to columns, so such reorderings stay comparable
+        # inside the SYMMETRIC tables instead of only being loadable as
+        # ASYMMETRIC.
         perm = np.fromstring(lines[0], sep=' ', dtype=np.int64) - 1
-        return perm, perm.copy()  # Return copy to avoid aliasing
+        if len(lines) < 2:
+            return perm, perm.copy()  # Return copy to avoid aliasing
+        col_perm = np.fromstring(lines[1], sep=' ', dtype=np.int64) - 1
+        return perm, col_perm
     elif perm_type == 'ASYMMETRIC':
         # Two permutations - read both lines.
         # A single-line file is accepted as a row-only permutation (columns
@@ -117,3 +128,24 @@ def save_permutation(path, perm):
     # Ensure perm is 0-based numpy array
     perm_1based = perm + 1
     np.savetxt(path, perm_1based.reshape(1, -1), fmt='%d', delimiter=' ')
+
+
+def save_two_sided_permutation(path, row_perm, col_perm=None):
+    """Save a two-line (row, col) permutation file (1-based).
+
+    Row-only callers pass col_perm=None and get the legacy single-line file,
+    which the ASYMMETRIC loader accepts as row-only. Two-sided callers
+    (e.g. HALO rectangular) pass both perms and get a genuine 2-line file.
+    """
+    import numpy as np
+
+    row_1based = np.asarray(row_perm).reshape(1, -1) + 1
+    if col_perm is None:
+        np.savetxt(path, row_1based, fmt='%d', delimiter=' ')
+        return
+    # Row and column counts generally differ (rectangular matrices), so the
+    # two lines are written independently rather than stacked/vstacked.
+    col_1based = np.asarray(col_perm).reshape(1, -1) + 1
+    with open(path, "w") as f:
+        f.write(" ".join(map(str, row_1based.ravel())) + "\n")
+        f.write(" ".join(map(str, col_1based.ravel())) + "\n")
