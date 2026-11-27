@@ -1,5 +1,5 @@
 """
-Plot Script - Clean Architecture
+Plot Script - Clean Architecture (Tufte-styled)
 
 Simple iteration-based plotting script that:
 1. Loads and processes data once
@@ -10,20 +10,118 @@ Simple iteration-based plotting script that:
 import argparse
 from pathlib import Path
 import matplotlib.pyplot as plt
+from matplotlib.collections import PolyCollection
 import pandas as pd
 import numpy as np
 import plot_utils as pu
 from multiprocessing import cpu_count
-from settings import get_perm_display, KERNEL_NAMES, GROUPED_SCATTER_EXCLUDE, PERMS, ALL_METRICS, BLOCK_SIZES, get_metric_display, get_metric_color, get_metric_hatch
-from correlation_table import (compute_imp_correlations,
-                               _enabled_improvement_metrics,
-                               _density_improvement_metrics, _corr_method_tag,
-                               _ordered_kernels)
+from settings import (
+    get_perm_display, KERNEL_NAMES, GROUPED_SCATTER_EXCLUDE, PERMS,
+    ALL_METRICS, BLOCK_SIZES, get_metric_display, get_metric_color,
+    get_metric_hatch,
+)
+from correlation_table import (
+    compute_imp_correlations,
+    _enabled_improvement_metrics,
+    _density_improvement_metrics,
+    _corr_method_tag,
+    _ordered_kernels,
+)
 
 # Axis caps for ratio scatter plots (speedup, improvement)
 RATIO_YLIM = (1 / 7, 7)
 RATIO_XLIM = (0.05, 10)  # x-axis bounds for improvement ratios
 
+
+# ---------------------------------------------------------------------------
+# Tufte Styling Helpers
+# ---------------------------------------------------------------------------
+
+def set_tufte_rcparams():
+    """Apply clean, high data-ink-ratio matplotlib defaults on top of plot_utils."""
+    plt.rcParams.update({
+        'axes.edgecolor': '#444444',
+        'axes.linewidth': 0.7,
+        'axes.labelcolor': '#222222',
+        'axes.titlecolor': '#111111',
+        'axes.titlepad': 10,
+        'axes.spines.top': False,
+        'axes.spines.right': False,
+        'xtick.color': '#444444',
+        'ytick.color': '#444444',
+        'xtick.major.width': 0.7,
+        'ytick.major.width': 0.7,
+        'xtick.minor.width': 0.5,
+        'ytick.minor.width': 0.5,
+        'xtick.direction': 'out',
+        'ytick.direction': 'out',
+        'grid.color': '#888888',
+        'grid.linewidth': 0.5,
+        'grid.alpha': 0.2,
+        'legend.frameon': False,
+        'figure.facecolor': 'white',
+        'axes.facecolor': 'white',
+        'savefig.facecolor': 'white',
+    })
+
+
+def apply_tufte_style(ax, grid_axis='y', offset_spines=False, keep_left=True):
+    """Strip chartjunk from an Axes: despine, soften ticks, and place subtle gridlines."""
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(keep_left)
+
+    for side in ('bottom', 'left'):
+        if ax.spines[side].get_visible():
+            ax.spines[side].set_color('#444444')
+            ax.spines[side].set_linewidth(0.7)
+            if offset_spines:
+                ax.spines[side].set_position(('outward', 5))
+
+    ax.tick_params(axis='both', which='major', direction='out', length=3.5,
+                   width=0.7, colors='#333333')
+    ax.tick_params(axis='both', which='minor', direction='out', length=2.0,
+                   width=0.5, colors='#666666')
+    if not keep_left:
+        ax.tick_params(axis='y', length=0)
+
+    ax.set_axisbelow(True)
+    ax.grid(False)
+    if grid_axis:
+        ax.grid(True, axis=grid_axis, which='major',
+                color='#888888', linestyle='-', linewidth=0.5, alpha=0.2)
+
+
+def _format_log10_ratio_axis(ax, log_lo, log_hi):
+    """Format a log10-transformed ratio y-axis with intuitive linear ticks (e.g. 0.5x, 1x, 2x)."""
+    candidates = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 4, 5, 10, 20, 50, 100, 200, 500, 1000]
+    ticks = [t for t in candidates if log_lo <= np.log10(t) <= log_hi]
+    if len(ticks) < 3:
+        # Fallback to powers of 10
+        p_lo, p_hi = int(np.floor(log_lo)), int(np.ceil(log_hi))
+        ticks = [10 ** p for p in range(p_lo, p_hi + 1)]
+    ax.set_yticks([np.log10(t) for t in ticks])
+    ax.set_yticklabels([f'{t:g}×' for t in ticks])
+
+
+def _draw_tufte_violin(ax, data, x, y_log, hue, order, hue_order, palette):
+    """Draw clipped, log-space violins with embedded median/IQR and muted fills."""
+    import seaborn as sns
+    sns.violinplot(
+        data=data, x=x, y=y_log, hue=hue,
+        order=order, hue_order=hue_order, palette=palette,
+        ax=ax, cut=0, inner='box', linewidth=0.65, saturation=0.85,
+    )
+    for coll in ax.collections:
+        if isinstance(coll, PolyCollection):
+            coll.set_alpha(0.72)
+            coll.set_edgecolor('white')
+            coll.set_linewidth(0.5)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate plots from analysis results.")
@@ -45,8 +143,7 @@ def parse_args():
     # Output
     parser.add_argument("--out", default=None, help="Output directory (default: plots or plots_random with --random)")
 
-    # Filter config (all filtering is driven by filter_config.yaml;
-    # these flags *override* settings in the config file)
+    # Filter config
     parser.add_argument("--filter-config", default=None,
                         help="Path to filter_config.yaml (default: scripts/filter_config.yaml)")
     parser.add_argument("--operations", default=None,
@@ -65,14 +162,14 @@ def parse_args():
                         help="Override: minimum matrix size (rows)")
     parser.add_argument("--max-size", type=int, default=None,
                         help="Override: maximum matrix size (rows or cols)")
-    
+
     # Plot selection
     parser.add_argument("--only-reorder-analysis", action="store_true")
     parser.add_argument("--only-kernels", action="store_true")
     parser.add_argument("--n-cols", type=int, default=None, help="Filter to specific n_cols")
     parser.add_argument("--kernel", type=str, default=None, help="Filter to specific kernel")
-    
-    # Fine-grained section selection (used by run_plots.py wrapper)
+
+    # Fine-grained section selection
     SECTION_CHOICES = [
         'grouped-scatter',
         'breakeven',
@@ -102,6 +199,10 @@ def parse_args():
 
     return parser.parse_args()
 
+
+# ---------------------------------------------------------------------------
+# Plot Generators
+# ---------------------------------------------------------------------------
 
 def generate_grouped_scatter_plots(df, out_dir, args):
     """Grouped 2x3 scatter: improvement metric vs speedup (log-log) per n_cols."""
@@ -137,8 +238,8 @@ def generate_grouped_scatter_plots(df, out_dir, args):
         grouped_dir.mkdir(parents=True, exist_ok=True)
 
         _kw = dict(ylim=RATIO_YLIM, xlim=RATIO_XLIM,
-                    baseline_x=1.0, baseline_y=1.0,
-                    quadrant_colors=True)
+                   baseline_x=1.0, baseline_y=1.0,
+                   quadrant_colors=True)
 
         for bs in BLOCK_SIZES:
             imp_col = f'density_improvement_{bs}'
@@ -148,6 +249,7 @@ def generate_grouped_scatter_plots(df, out_dir, args):
                     group_col='kernel_id', group_order=grouped_kernels,
                     output_path=grouped_dir / f"speedup_vs_density_imp_bs{bs}_loglog.png",
                     group_labels=kernel_labels, log_x=True, log_y=True,
+                    mark_failures=True,
                     **_kw)))
 
         for imp_col in ['bandwidth_improvement', 'row_spread_improvement',
@@ -167,21 +269,9 @@ def generate_grouped_scatter_plots(df, out_dir, args):
 
 
 def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reordering.csv', args=None):
-    """Compute and plot break-even number of operations for each reordering.
-
-    For every (matrix, perm, kernel_id, n_cols) tuple the break-even count is:
-
-        breakeven_n = time_reordering_ms / (time_baseline_ms - time_reordered_ms)
-
-    Cases where reordering is harmful (denominator ≤ 0) are shown as '×'
-    markers at a cap line and excluded from boxplot statistics.
-
-    Outputs one boxplot per (kernel, n_cols) to
-    ``plots/n_cols_{N}/{kernel}/breakeven/``.
-    """
+    """Compute and plot break-even number of operations for each reordering."""
     print("\n=== Break-even Analysis ===")
 
-    # --- Load reordering times ---
     reorder_csv_path = Path(reordering_csv)
     if not reorder_csv_path.exists():
         print(f"  Reordering CSV not found at {reorder_csv_path} — skipping break-even plots. "
@@ -193,13 +283,10 @@ def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reorde
         print("  No reordering timing data available — skipping.")
         return
 
-    # Keep only timing columns we need
     df_time = df_time[['matrix', 'perm', 'time_reordering_ms']].copy()
-    # Average over duplicate runs for the same (matrix, perm)
     df_time = df_time.groupby(['matrix', 'perm'], as_index=False)['time_reordering_ms'].mean()
     print(f"  Loaded {len(df_time)} reordering timing entries")
 
-    # --- Baseline operation times ---
     df_baseline = (
         df[df['strategy'] == 'Original']
         .groupby(['matrix', 'kernel_id', 'n_cols'])['time_operation_ms']
@@ -208,23 +295,18 @@ def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reorde
         .rename(columns={'time_operation_ms': 'time_baseline_ms'})
     )
 
-    # --- Reordered rows only ---
     df_reord = df[df['strategy'] != 'Original'].copy()
     if df_reord.empty:
         print("  No reordered operation data — skipping.")
         return
 
-    # Merge baseline time
     df_reord = df_reord.merge(df_baseline, on=['matrix', 'kernel_id', 'n_cols'], how='inner')
-
-    # Merge reordering time
     df_reord = df_reord.merge(df_time, on=['matrix', 'perm'], how='inner')
 
     if df_reord.empty:
         print("  No overlapping data between operations and reordering timing — skipping.")
         return
 
-    # --- Compute break-even ---
     df_reord['time_saved_ms'] = df_reord['time_baseline_ms'] - df_reord['time_operation_ms']
     df_reord['breakeven_n'] = np.where(
         df_reord['time_saved_ms'] > 0,
@@ -237,7 +319,6 @@ def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reorde
     n_harmful = int(df_reord['harmful'].sum())
     print(f"  Break-even computed: {n_valid} valid, {n_harmful} harmful (never breaks even)")
 
-    # --- Apply CLI filters ---
     n_cols_values = sorted(df_reord['n_cols'].unique())
     if args is not None and args.n_cols is not None:
         if args.n_cols in n_cols_values:
@@ -247,13 +328,11 @@ def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reorde
             return
 
     kernel_filter = args.kernel if args is not None else None
-
-    # --- Collect and generate plots ---
     n_jobs = getattr(args, 'jobs', None) if args is not None else None
     tasks = []
+
     for n_cols in n_cols_values:
         df_nc = df_reord[df_reord['n_cols'] == n_cols]
-
         kernels = sorted(df_nc['kernel_id'].unique())
         if kernel_filter:
             kernels = [k for k in kernels if kernel_filter.lower() in k.lower()]
@@ -275,7 +354,7 @@ def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reorde
             tasks.append((pu.breakeven_boxplot, dict(
                 df_valid=df_valid, df_harmful=df_harm,
                 x_col='strategy', y_col='breakeven_n',
-                output_path=breakeven_dir / f"breakeven.png",
+                output_path=breakeven_dir / "breakeven.png",
                 title=f"Break-even Operations\n{kernel}  (n_cols={int(n_cols)})",
                 order=[s for s in strategies if s in df_valid['strategy'].unique()
                        or s in df_harm['strategy'].unique()],
@@ -288,23 +367,17 @@ def generate_breakeven_plots(df, out_dir, reordering_csv='results/results_reorde
 
 def generate_reorder_analysis_plots(df_analysis, out_dir, n_jobs=None):
     """Generate reordering analysis plots (independent of kernel performance)."""
-
     print("\n=== Reordering Analysis ===")
 
     reorder_dir = out_dir / "reorder_analysis"
 
-    # Process analysis data
     df = df_analysis.copy()
     df['strategy'] = df['perm'].apply(
         lambda x: 'Original' if x == 'None' else get_perm_display(x)
     )
 
-    # Calculate improvements using the shared utility (extended mode includes
-    # bandwidth_avg, max spreads, and blocks-per-row metrics)
     metrics_config = pu.build_metrics_config(df, include_extended=True)
     df = pu.compute_improvements(df, metrics_config)
-
-    # Filter to reordered only
     df_reordered = df[df['strategy'] != 'Original']
 
     if df_reordered.empty:
@@ -313,18 +386,12 @@ def generate_reorder_analysis_plots(df_analysis, out_dir, n_jobs=None):
 
     strategies = sorted(df_reordered['strategy'].unique())
 
-    # -----------------------------------------------------------------
-    # All boxplot sections: (imp_col, title_template, subdir, filename_template)
-    # -----------------------------------------------------------------
-    boxplot_specs = []
+    boxplot_specs = [
+        (f'density_improvement_{bs}', f"Density Improvement (BS {bs})",
+         "density", f"density_improvement_bs{bs}.png")
+        for bs in [4, 8, 16, 32, 64, 128]
+    ]
 
-    for bs in [4, 8, 16, 32, 64, 128]:
-        boxplot_specs.append((
-            f'density_improvement_{bs}',
-            f"Density Improvement (BS {bs})",
-            "density", f"density_improvement_bs{bs}.png"))
-
-    # Collect all boxplot tasks
     tasks = []
     for imp_col, title_text, subdir, filename in boxplot_specs:
         if imp_col not in df_reordered.columns:
@@ -343,24 +410,7 @@ def generate_reorder_analysis_plots(df_analysis, out_dir, n_jobs=None):
 
 
 def generate_pareto_plots(df_analysis, out_dir, reordering_csv='results/results_reordering.csv', args=None):
-    """Pareto frontier: density improvement vs reordering time.
-
-    One point per reordering strategy. X = median reordering time over
-    matrices (log scale, ms) from the reordering CSV. Y = median, over
-    matrices, of the per-matrix mean density improvement across block
-    sizes 4/8/16/32/64/128 (each against that matrix's un-reordered
-    baseline). IQR error bars on both axes; the non-dominated strategies
-    (no other is both faster AND better) are joined by a dashed frontier.
-
-    Pairwise-complete aggregation: each strategy's quality median uses all
-    matrices where it has data (plus that matrix's baseline), and its time
-    median uses all matrices where it has timing — strategies are NOT
-    restricted to matrices complete under every strategy, since missingness
-    is concentrated in the slow/GPU methods (they time out on the hardest
-    matrices) and the complete-case subset biased the comparison toward
-    small/easy inputs. Per-strategy sample sizes (n) are reported in the
-    console table, annotated on each marker, and shown in the title.
-    """
+    """Pareto frontier: geometric mean density improvement vs reordering time."""
     print("\n=== Pareto Frontier (quality vs time) ===")
 
     df = df_analysis.copy()
@@ -389,24 +439,17 @@ def generate_pareto_plots(df_analysis, out_dir, reordering_csv='results/results_
     else:
         print(f"  No timing at {reorder_csv_path} and no timing column — skipping.")
         return
-    print(f"  Loaded {len(df_time)} reordering timing entries")
 
     all_perms = sorted(df['perm'].unique())
     if 'None' not in all_perms:
         print("  No 'None' baseline in analysis data — skipping.")
         return
-    # Pairwise-complete: keep every matrix that has the baseline.
-    # Each strategy is scored on all matrices where IT has data (quality arm)
-    # and timed on all matrices where IT has timing (time arm) — no
-    # complete-across-strategies restriction.
+
     has_base = df[df['perm'] == 'None']['matrix'].unique()
     n_matrices = len(has_base)
     df = df[df['matrix'].isin(has_base)]
     df_time = df_time[df_time['matrix'].isin(has_base)]
-    print(f"  Using {n_matrices} matrices with a baseline "
-          f"({len(all_perms) - 1} strategies, pairwise-complete)")
     if df.empty:
-        print("  No matrices with baseline — skipping pareto plots.")
         return
 
     base = (df[df['perm'] == 'None']
@@ -415,18 +458,21 @@ def generate_pareto_plots(df_analysis, out_dir, reordering_csv='results/results_
     df_reord = df[df['perm'] != 'None'].merge(
         base, left_on='matrix', right_index=True, how='inner')
     if df_reord.empty:
-        print("  No reordered data overlapping the baseline — skipping.")
         return
+
     ratios = np.column_stack([
         (df_reord[c] / df_reord[c + '_base'].replace(0, np.nan)).to_numpy()
         for c in bd_cols
     ])
-    df_reord = df_reord.assign(
-        mean_density_imp=np.nanmean(np.where(np.isfinite(ratios), ratios, np.nan),
-                                    axis=1))
+    valid_ratios = np.where((ratios > 0) & np.isfinite(ratios), ratios, np.nan)
+    with np.errstate(invalid='ignore'):
+        geomean_imp = np.exp(np.nanmean(np.log(valid_ratios), axis=1))
+
+    df_reord = df_reord.assign(mean_density_imp=geomean_imp)
     df_reord = df_reord.dropna(subset=['mean_density_imp'])
     df_reord = df_reord[np.isfinite(df_reord['mean_density_imp'])]
-    df_time = df_time[df_time['perm'] != 'None']
+    df_time = df_time[(df_time['perm'] != 'None') & (df_time['time_reordering_ms'] > 0)]
+
     imp_stats = (df_reord.groupby('perm')
                  .agg(imp_med=('mean_density_imp', 'median'),
                       imp_q1=('mean_density_imp', lambda s: s.quantile(0.25)),
@@ -439,122 +485,149 @@ def generate_pareto_plots(df_analysis, out_dir, reordering_csv='results/results_
                        t_q3=('time_reordering_ms', lambda s: s.quantile(0.75)),
                        n_t=('time_reordering_ms', 'size'))
                   .reset_index())
+
     stats = imp_stats.merge(time_stats, on='perm', how='inner')
     stats = stats[(stats['t_med'] > 0) & np.isfinite(stats['imp_med'])]
     if stats.empty:
-        print("  No usable timing/improvement data — skipping.")
         return
+
     stats['strategy'] = stats['perm'].apply(get_perm_display)
     order = pu.profile_perm_order(set(stats['perm'].unique()))
     stats['pos'] = stats['perm'].apply(lambda p: order.index(p) if p in order else 999)
     stats = stats.sort_values('pos').reset_index(drop=True)
 
-    # Pareto frontier (maximize imp, minimize time): non-dominated points.
-    # Walk strategies in time order; a strategy joins the frontier iff it
-    # beats every faster one's improvement. The flag is attached to `stats`
-    # keyed by perm so the scatter can use it directly.
-    by_time = stats.sort_values('t_med')
+    by_time = stats.sort_values(['t_med', 'imp_med'], ascending=[True, False])
     frontrunners, best_y = set(), -np.inf
-    for perm, grp in by_time.groupby('perm', sort=False):
-        y = grp['imp_med'].max()
-        if y > best_y + 1e-12:
-            frontrunners.add(perm)
-            best_y = y
-    stats = stats.assign(front=stats['perm'].isin(frontrunners))
+    for _, row in by_time.iterrows():
+        if row['imp_med'] > best_y + 1e-12:
+            frontrunners.add(row['perm'])
+            best_y = row['imp_med']
+
+    stats['front'] = stats['perm'].isin(frontrunners)
+    stats['coverage'] = np.minimum(stats['n_imp'], stats['n_t']) / float(n_matrices)
     front = stats[stats['front']].sort_values('t_med')
 
-    # Console table with per-strategy sample sizes, sorted by quality.
-    print(f"  {'strategy':28s} {'imp_med':>8s} {'t_med_ms':>10s} {'n_imp':>6s} {'n_t':>5s}")
-    for _, row in stats.sort_values('imp_med', ascending=False).iterrows():
-        mark = '*' if row['front'] else ' '
-        print(f" {mark}{' ' if mark == '*' else ' '}{row['strategy']:26s} "
-              f"{row['imp_med']:8.3f} {row['t_med']:10.1f} "
-              f"{int(row['n_imp']):6d} {int(row['n_t']):5d}")
-    print("  (* = Pareto-optimal)")
-
-    _pareto_scatter(stats, front, out_dir, n_matrices)
+    _pareto_scatter(stats, front, out_dir, n_matrices, show_iqr=False)
+    _pareto_scatter(stats, front, out_dir, n_matrices, show_iqr=True)
 
 
-def _pareto_scatter(stats, front, out_dir, n_matrices):
-    """Draw the Pareto scatter figure (called by generate_pareto_plots)."""
+def _pareto_scatter(stats, front, out_dir, n_matrices, show_iqr=False):
+    """Draw a Tufte-inspired Pareto scatter: direct labels, crisp hierarchy, zero chartjunk."""
     pu.set_professional_style()
-    fig, ax = plt.subplots(figsize=(10, 6.5))
+    set_tufte_rcparams()
 
+    fig, ax = plt.subplots(figsize=(8.5, 5.2))
     palette = pu.get_strategy_palette(list(stats['strategy'].unique()))
 
-    ax.axhline(1.0, color='black', linestyle='--', linewidth=0.8, alpha=0.6,
-               label='Baseline (no reordering)')
+    # Compute generous log bounds so direct labels breathe
+    x_col_lo = 't_q1' if show_iqr else 't_med'
+    x_col_hi = 't_q3' if show_iqr else 't_med'
+    y_col_lo = 'imp_q1' if show_iqr else 'imp_med'
+    y_col_hi = 'imp_q3' if show_iqr else 'imp_med'
 
-    # Frontier line under the markers
-    if len(front) >= 2:
-        ax.plot(front['t_med'], front['imp_med'], color='black',
-                linestyle='--', linewidth=1.2, alpha=0.7, zorder=1,
-                label='Pareto frontier')
+    x_min = stats[x_col_lo].min() * 0.65
+    x_max = stats[x_col_hi].max() * 2.2
+    y_min = min(stats[y_col_lo].min(), 1.0) * 0.82
+    y_max = stats[y_col_hi].max() * 1.25
 
+    # 1. Subtle 1x baseline with direct right-margin label (no legend needed)
+    ax.axhline(1.0, color='#999999', linestyle=':', linewidth=0.9, zorder=1)
+    ax.text(x_max * 0.96, 1.0, 'Baseline (1×)', fontsize=8, color='#777777',
+            va='bottom', ha='right', style='italic', zorder=2)
+
+    # 2. Clean stepped Pareto frontier (no broken log-scale fill_between)
+    if len(front) >= 1:
+        xs = list(front['t_med']) + [x_max * 0.92]
+        ys = list(front['imp_med']) + [front['imp_med'].iloc[-1]]
+        ax.step(xs, ys, where='post', color='#333333', linestyle='--',
+                linewidth=1.0, alpha=0.65, zorder=2)
+        ax.text(xs[-1], ys[-1], 'Pareto frontier', fontsize=8, color='#444444',
+                va='bottom', ha='right', style='italic', zorder=2)
+
+    # 3. Optional capless Tufte IQR crosshairs
+    if show_iqr:
+        for _, row in stats.iterrows():
+            c = palette.get(row['strategy'], '#444444')
+            alpha_iqr = 0.45 if row['front'] else 0.22
+            ax.errorbar(
+                row['t_med'], row['imp_med'],
+                xerr=[[max(0.0, row['t_med'] - row['t_q1'])],
+                      [max(0.0, row['t_q3'] - row['t_med'])]],
+                yerr=[[max(0.0, row['imp_med'] - row['imp_q1'])],
+                      [max(0.0, row['imp_q3'] - row['imp_med'])]],
+                fmt='none', ecolor=c, elinewidth=0.9, capsize=0,
+                alpha=alpha_iqr, zorder=2,
+            )
+
+    # 4. Points with clear foreground (Pareto) vs background (dominated) hierarchy
+    texts = []
     for _, row in stats.iterrows():
-        ax.errorbar(row['t_med'], row['imp_med'],
-                    xerr=[[row['t_med'] - row['t_q1']], [row['t_q3'] - row['t_med']]],
-                    yerr=[[row['imp_med'] - row['imp_q1']], [row['imp_q3'] - row['imp_med']]],
-                    fmt='none', ecolor='grey', elinewidth=1.0, capsize=3,
-                    alpha=0.6, zorder=2)
-    for _, row in stats.iterrows():
-        edge = 'gold' if row['front'] else 'black'
-        lw = 1.6 if row['front'] else 0.8
-        ax.scatter(row['t_med'], row['imp_med'], s=140,
-                   color=palette.get(row['strategy'], '#333333'),
-                   edgecolors=edge, linewidths=lw, zorder=3)
-        # Label carries the pairwise sample size: quality n first, then time
-        # n when they differ (label shows min so the weaker arm is explicit).
-        n_lab = (f"n={int(row['n_imp'])}"
-                 if int(row['n_imp']) == int(row['n_t'])
-                 else f"n={int(row['n_imp'])}/{int(row['n_t'])}")
-        ax.annotate(f"{row['strategy']}\n({n_lab})",
-                    (row['t_med'], row['imp_med']),
-                    xytext=(6, 0), textcoords='offset points',
-                    fontsize=8, va='center')
+        c = palette.get(row['strategy'], '#333333')
+        is_front = bool(row['front'])
 
-    ax.set_xscale('log')
-    ax.set_xlabel('Median reordering time [ms] (per-strategy matrices)')
-    ax.set_ylabel('Median mean-density improvement (bs 4–128, per-strategy matrices)')
+        ax.scatter(
+            row['t_med'], row['imp_med'],
+            s=95 if is_front else 42,
+            color=c,
+            edgecolors='white' if is_front else 'none',
+            linewidths=1.3 if is_front else 0.0,
+            alpha=0.95 if is_front else 0.50,
+            zorder=5 if is_front else 3,
+        )
 
+        n_min = min(int(row['n_imp']), int(row['n_t']))
+        label_str = row['strategy']
+        if n_min < 0.95 * n_matrices:
+            label_str += f" ({n_min}/{n_matrices})"
+
+        txt = ax.text(
+            row['t_med'], row['imp_med'], f"  {label_str}",
+            fontsize=8.5 if is_front else 7.8,
+            fontweight='semibold' if is_front else 'normal',
+            color='#111111' if is_front else '#666666',
+            va='center', ha='left', zorder=6 if is_front else 4,
+        )
+        texts.append(txt)
+
+    # 5. Scales, subtle Tufte axes, and minimal directional cue
     ax.set_xscale('log')
-    ax.set_xlabel('Median reordering time [ms]')
-    ax.set_ylabel('Median mean-density improvement (bs 4–128)')
-    ax.set_title("Pareto: quality vs reordering time  "
-                 f"(matrices with baseline: {n_matrices}; per-strategy n in labels)")
-    ax.grid(True, which='both', alpha=0.3)
-    ax.legend()
+    ax.set_yscale('log')
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+    pu.format_log_axes(ax, which='y')
+    apply_tufte_style(ax, grid_axis='both', offset_spines=True)
+
+    ax.text(0.01, 0.99, '↖  Faster & higher quality',
+            transform=ax.transAxes, fontsize=8.5, color='#555555',
+            style='italic', va='top', ha='left')
+
+    ax.set_xlabel('Median Reordering Time (ms, log scale)', fontsize=10, labelpad=8)
+    ax.set_ylabel('Median Density Improvement (GeoMean BS 4–128)', fontsize=10, labelpad=8)
+
+    # 6. Auto-repel overlapping labels cleanly
+    try:
+        from adjustText import adjust_text
+        adjust_text(
+            texts, ax=ax,
+            arrowprops=dict(arrowstyle='-', color='#aaaaaa', lw=0.5, alpha=0.7),
+            expand_points=(1.35, 1.35),
+        )
+    except ImportError:
+        pass
 
     fig.tight_layout()
     pareto_dir = out_dir / 'pareto'
     pareto_dir.mkdir(parents=True, exist_ok=True)
+    suffix = '_iqr' if show_iqr else ''
     for ext in ('pdf', 'png'):
-        fig.savefig(pareto_dir / f'pareto_density_vs_time.{ext}',
-                    bbox_inches='tight', dpi=150)
+        fig.savefig(pareto_dir / f'pareto_density_vs_time{suffix}.{ext}',
+                    bbox_inches='tight', dpi=300)
     plt.close(fig)
-    print("  Saved pareto_density_vs_time.pdf/png")
+    print(f"  Saved pareto_density_vs_time{suffix}.pdf/png")
 
 
 def generate_profile_plots(df_analysis, out_dir):
-    """Generate Dolan-Moré performance-profile plots.
-
-    For each metric and solver (perm) s, compute the ratio relative to the
-    best solver on each matrix m:
-        higher_is_better:  r_{m,s} = val_{m,s} / max_{s'} val_{m,s'}  ∈ (0, 1]
-        lower_is_better:   r_{m,s} = val_{m,s} / min_{s'} val_{m,s'}  ∈ [1, ∞)
-
-    In both cases r = 1 means s is the best solver on that matrix.
-
-    The profile plots:
-      - higher_is_better: survival function P(ratio >= τ), x from 1 toward 0
-      - lower_is_better:  CDF P(ratio <= τ), x from 1 toward ∞
-
-    Higher curve = better solver in both cases.
-
-    All permutations *and* the original ordering (None) are included as
-    competing solvers.
-    """
-    # Same raw metrics as the correlation heatmaps (no bandwidth).
+    """Generate Tufte-styled Dolan-Moré performance-profile plots."""
     profile_metrics = [
         'bandwidth_max',
         'locality_avg_col_spread',
@@ -570,60 +643,37 @@ def generate_profile_plots(df_analysis, out_dir):
         print("  No usable metrics — skipping profile plots.")
         return
 
-    # Work directly with raw metric values (including perm='None').
-    # The DataFrame is already filtered to a single perm_type by
-    # split_by_perm_type(), so no per-perm_type grouping is needed.
     base_cols = ['matrix', 'perm', 'perm_type']
     group_df = df_analysis[base_cols + profile_metrics].copy()
-
     if group_df.empty:
         print("  No data — skipping profile plots.")
         return
 
-    # Keep only matrices that have all perms present
-    all_perms = group_df['perm'].unique()
-    n_perms = len(all_perms)
-    perm_counts = group_df.groupby('matrix')['perm'].nunique()
-    complete_matrices = perm_counts[perm_counts == n_perms].index
-    group_df = group_df[group_df['matrix'].isin(complete_matrices)]
-    print(f"  Restricted to {len(complete_matrices)} matrices with all {n_perms} perms")
+    n_matrices_total = group_df['matrix'].nunique()
+    print(f"  Using all {n_matrices_total} matrices (pairwise-complete per metric)")
 
-    if group_df.empty:
-        print("  No complete matrices — skipping profile plots.")
-        return
-
-    # For each metric, compute Dolan-Moré performance ratios
-    profile_data = {}  # metric -> (n_matrices, {perm -> sorted_ratios})
+    profile_data = {}
     for m in profile_metrics:
         sub = group_df[['matrix', 'perm', m]].dropna(subset=[m])
-        # Filter out zero / negative values
         sub = sub[sub[m] > 0]
         if sub.empty:
             profile_data[m] = (0, {})
             continue
 
-        # ratio = value / best:
-        #   higher_is_better → ∈ (0, 1], lower_is_better → ∈ [1, ∞)
         hib = ALL_METRICS[m]['higher_is_better']
-        if hib:
-            best = sub.groupby('matrix')[m].max().rename('best')
-        else:
-            best = sub.groupby('matrix')[m].min().rename('best')
+        best = (sub.groupby('matrix')[m].max() if hib else sub.groupby('matrix')[m].min()).rename('best')
         sub = sub.merge(best, on='matrix')
-        # relative value (value / best)
         sub['tau'] = sub[m] / sub['best']
 
         n_matrices = sub['matrix'].nunique()
-        perm_ratios = {}
-        for perm, perm_sub in sub.groupby('perm'):
-            perm_ratios[perm] = np.sort(perm_sub['tau'].values)
+        perm_ratios = {perm: np.sort(perm_sub['tau'].values)
+                       for perm, perm_sub in sub.groupby('perm')}
         profile_data[m] = (n_matrices, perm_ratios)
 
-    # Layout: 3 columns
     n_metrics = len(profile_metrics)
     ncols = min(3, n_metrics)
     nrows = (n_metrics + ncols - 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows),
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.8 * ncols, 3.6 * nrows),
                              squeeze=False)
 
     perm_order = pu.profile_perm_order(set(group_df['perm'].unique()))
@@ -632,10 +682,10 @@ def generate_profile_plots(df_analysis, out_dir):
         ax = axes[idx // ncols][idx % ncols]
         n_matrices, data = profile_data[m]
         if n_matrices == 0:
+            ax.set_visible(False)
             continue
         hib = ALL_METRICS[m]['higher_is_better']
 
-        # Compute xlim early so extensions can reach plot borders
         if hib:
             xlim_lo, xlim_hi = 2**-4, 1.05
         else:
@@ -647,42 +697,37 @@ def generate_profile_plots(df_analysis, out_dir):
             if perm not in data or len(data[perm]) == 0:
                 continue
             pu.draw_profile_curve(ax, data[perm], n_matrices, perm,
-                                xlim_lo, xlim_hi, hib)
+                                  xlim_lo, xlim_hi, hib)
 
-        ax.set_title(get_metric_display(m), fontsize=10)
-        ax.set_xlabel(f"{get_metric_display(m)} relative to the best")
-        ax.set_ylabel('Fraction of matrices')
+        ax.set_title(get_metric_display(m), fontsize=10, fontweight='semibold', pad=8)
+        ax.set_xlabel('Ratio to best', fontsize=9)
+        ax.set_ylabel('Fraction of matrices' if (idx % ncols == 0) else '', fontsize=9)
         ax.set_xscale('log', base=2)
-        ax.set_ylim(0, 1.05)
+        ax.set_ylim(0, 1.03)
+        ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+        ax.set_xlim(xlim_lo, xlim_hi)
         if hib:
-            ax.set_xlim(xlim_lo, xlim_hi)
             ax.invert_xaxis()
-        else:
-            ax.set_xlim(xlim_lo, xlim_hi)
-        ax.grid(True, alpha=0.3)
+        apply_tufte_style(ax, grid_axis='both', offset_spines=True)
 
-    # Hide unused axes
     for idx in range(n_metrics, nrows * ncols):
         axes[idx // ncols][idx % ncols].set_visible(False)
 
-    # Shared legend above the plots
     handles, labels = axes[0][0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='upper center',
                ncol=min(6, len(handles)), fontsize=9,
-               bbox_to_anchor=(0.5, 1.02))
+               frameon=False, bbox_to_anchor=(0.5, 1.03))
 
-    fig.tight_layout()
+    fig.tight_layout(h_pad=1.6, w_pad=1.4)
 
     prof_dir = out_dir / 'reorder_analysis' / 'profiles'
     prof_dir.mkdir(parents=True, exist_ok=True)
     for ext in ('pdf', 'png'):
-        fig.savefig(prof_dir / f'profiles.{ext}',
-                    bbox_inches='tight', dpi=150)
+        fig.savefig(prof_dir / f'profiles.{ext}', bbox_inches='tight', dpi=300)
     plt.close(fig)
-    print(f"  Saved profiles.pdf/png")
+    print("  Saved profiles.pdf/png")
 
     # --- Standalone block_density_16 profile plot ---
-    # This uses its own data (not from profile_metrics above).
     bd_metric = 'block_density_16'
     if bd_metric in df_analysis.columns and ALL_METRICS.get(bd_metric, {}).get('higher_is_better') is not None:
         sub_bd = group_df[['matrix', 'perm']].copy()
@@ -695,53 +740,47 @@ def generate_profile_plots(df_analysis, out_dir):
             sub_bd = sub_bd.merge(best_bd, on='matrix')
             sub_bd['tau'] = sub_bd[bd_metric] / sub_bd['best']
             n_matrices_bd = sub_bd['matrix'].nunique()
-            data_bd = {}
-            for perm, perm_sub in sub_bd.groupby('perm'):
-                data_bd[perm] = np.sort(perm_sub['tau'].values)
+            data_bd = {perm: np.sort(perm_sub['tau'].values)
+                       for perm, perm_sub in sub_bd.groupby('perm')}
 
-            fig_bd, ax_bd = plt.subplots(figsize=(6, 4.5))
+            fig_bd, ax_bd = plt.subplots(figsize=(5.8, 4.2))
             xlim_lo_bd, xlim_hi_bd = 2**-4, 1.05
             for perm in perm_order:
                 if perm not in data_bd or len(data_bd[perm]) == 0:
                     continue
                 pu.draw_profile_curve(ax_bd, data_bd[perm], n_matrices_bd, perm,
-                                    xlim_lo_bd, xlim_hi_bd, higher_is_better=True)
-            ax_bd.set_xlabel(f'{get_metric_display(bd_metric)} relative to the best')
-            ax_bd.set_ylabel('Fraction of matrices')
+                                      xlim_lo_bd, xlim_hi_bd, higher_is_better=True)
+            ax_bd.set_xlabel(f'{get_metric_display(bd_metric)} relative to best', fontsize=9.5)
+            ax_bd.set_ylabel('Fraction of matrices', fontsize=9.5)
             ax_bd.set_xscale('log', base=2)
-            ax_bd.set_ylim(0, 1.05)
+            ax_bd.set_ylim(0, 1.03)
+            ax_bd.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
             ax_bd.set_xlim(xlim_lo_bd, xlim_hi_bd)
             ax_bd.invert_xaxis()
-            ax_bd.grid(True, alpha=0.3)
+            apply_tufte_style(ax_bd, grid_axis='both', offset_spines=True)
             handles_bd, labels_bd = ax_bd.get_legend_handles_labels()
 
             fig_bd.tight_layout()
             for ext in ('pdf', 'png'):
                 fig_bd.savefig(prof_dir / f'profile_block_density_16.{ext}',
-                               bbox_inches='tight', dpi=150)
+                               bbox_inches='tight', dpi=300)
             plt.close(fig_bd)
-            print(f"  Saved profile_block_density_16.pdf/png")
+            print("  Saved profile_block_density_16.pdf/png")
 
-            # --- Standalone legend ---
             ncol_leg = (len(handles_bd) + 1) // 2
-            fig_leg = plt.figure(figsize=(6, 1.2))
+            fig_leg = plt.figure(figsize=(6, 1.0))
             fig_leg.legend(handles_bd, labels_bd, loc='center',
                            ncol=ncol_leg, fontsize=9, frameon=False)
             for ext in ('pdf', 'png'):
                 fig_leg.savefig(prof_dir / f'profile_legend.{ext}',
-                                bbox_inches='tight', dpi=150)
+                                bbox_inches='tight', dpi=300)
             plt.close(fig_leg)
-            print(f"  Saved profile_legend.pdf/png")
+            print("  Saved profile_legend.pdf/png")
 
 
 def generate_profile_aggregate_boxplot(df_analysis, out_dir):
-    """Generate aggregated boxplot of improvement ratios across profile metrics.
-
-    For each reordering algorithm and each of the 6 profile metrics, shows
-    a boxplot of the improvement ratio (reordered / original, direction-aware)
-    across all matrices. Algorithms on x-axis, 6 colored boxes per algorithm.
-    """
-    print("\n=== Aggregated Profile Improvement Boxplot ===")
+    """Generate Tufte-styled log-space violin plot of improvement ratios across profile metrics."""
+    print("\n=== Aggregated Profile Improvement Violin Plot ===")
 
     profile_metrics = [
         'bandwidth_max',
@@ -756,7 +795,7 @@ def generate_profile_aggregate_boxplot(df_analysis, out_dir):
                        if m in df_analysis.columns
                        and ALL_METRICS.get(m, {}).get('higher_is_better') is not None]
     if not profile_metrics:
-        print("  No usable metrics — skipping aggregate boxplot.")
+        print("  No usable metrics — skipping aggregate violin plot.")
         return
 
     df = df_analysis.copy()
@@ -765,7 +804,6 @@ def generate_profile_aggregate_boxplot(df_analysis, out_dir):
         lambda x: 'Original' if x == 'None' else get_perm_display(x)
     )
 
-    # Compute improvement ratios for each metric
     metrics_config = {
         'bandwidth_max': {'improvement_name': 'bandwidth_improvement', 'higher_is_better': False},
         'locality_avg_col_spread': {'improvement_name': 'col_spread_improvement', 'higher_is_better': False},
@@ -777,16 +815,12 @@ def generate_profile_aggregate_boxplot(df_analysis, out_dir):
     }
     metrics_config = {k: v for k, v in metrics_config.items() if k in profile_metrics}
     df = pu.compute_improvements(df, metrics_config)
-
-    # Exclude Original (improvement = 1 by definition)
     df = df[df['strategy'] != 'Original']
 
-    # Melt into long form: one row per (matrix, strategy, metric)
     imp_cols = [v['improvement_name'] for v in metrics_config.values()]
     imp_display = {}
     for m, cfg in metrics_config.items():
         display = get_metric_display(m)
-        # Shorten for readability
         for suffix in [' Improvement', ' Reduction']:
             display = display.replace(suffix, '')
         imp_display[cfg['improvement_name']] = display
@@ -798,151 +832,125 @@ def generate_profile_aggregate_boxplot(df_analysis, out_dir):
     )
     df_long['metric_display'] = df_long['metric'].map(imp_display)
     df_long = df_long.dropna(subset=['improvement'])
-    # Remove inf / extreme outliers
-    df_long = df_long[np.isfinite(df_long['improvement'])]
+    df_long = df_long[np.isfinite(df_long['improvement']) & (df_long['improvement'] > 0)]
 
     if df_long.empty:
-        print("  No improvement data — skipping aggregate boxplot.")
+        print("  No improvement data — skipping aggregate violin plot.")
         return
 
-    # Strategy order & palette (exclude Original) — same as aggregate speedup
+    # Compute KDE in log10 space so violin density is not distorted by log scaling
+    df_long['log_imp'] = np.log10(df_long['improvement'])
+
     strat_order = [get_perm_display(p) for p in PERMS if p != 'None']
     strat_order = [s for s in strat_order if s in df_long['strategy'].unique()]
-    strat_palette = pu.get_strategy_palette()
-    strat_palette = {k: v for k, v in strat_palette.items() if k != 'Original'}
-
+    strat_palette = {k: v for k, v in pu.get_strategy_palette().items() if k != 'Original'}
     metric_order = [imp_display[c] for c in imp_cols if c in imp_display]
 
-    import seaborn as sns
     agg_dir = out_dir / 'reorder_analysis' / 'aggregate_improvement'
     agg_dir.mkdir(parents=True, exist_ok=True)
 
-    # Metrics on x-axis, reordering algorithms as hue (mirrors aggregate speedup by kernel)
     n_metrics = len(metric_order)
-    fig, ax = plt.subplots(figsize=(max(14, n_metrics * 2.0), 6))
+    fig, ax = plt.subplots(figsize=(max(13, n_metrics * 1.9), 5.6))
 
-    sns.boxplot(
-        data=df_long, x='metric_display', y='improvement', hue='strategy',
+    _draw_tufte_violin(
+        ax, df_long, x='metric_display', y_log='log_imp', hue='strategy',
         order=metric_order, hue_order=strat_order, palette=strat_palette,
-        ax=ax, fliersize=1.5, linewidth=0.8,
-        whis=(5, 95), showfliers=False,
-        medianprops=dict(color='red', linewidth=0.8),
     )
 
-    ax.axhline(y=1.0, color='black', linestyle='--', linewidth=0.8, alpha=0.6)
+    ax.axhline(y=0.0, color='#333333', linestyle='--', linewidth=0.8, alpha=0.65, zorder=2)
+
+    p02 = df_long['log_imp'].quantile(0.02)
+    p98 = df_long['log_imp'].quantile(0.98)
+    pad = max(0.12, (p98 - p02) * 0.08)
+    y_lo, y_hi = p02 - pad, p98 + pad
+    ax.set_ylim(y_lo, y_hi)
+    _format_log10_ratio_axis(ax, y_lo, y_hi)
+
     ax.set_xlabel('')
-    ax.set_ylabel('Improvement ratio')
+    ax.set_ylabel('Improvement ratio (log scale)', fontsize=10, labelpad=8)
+    ax.tick_params(axis='x', rotation=25)
+    plt.setp(ax.get_xticklabels(), ha='right')
+    apply_tufte_style(ax, grid_axis='y', offset_spines=False)
 
-    ax.set_yscale('log')
-    p05 = df_long['improvement'].quantile(0.02)
-    p95 = df_long['improvement'].quantile(0.98)
-    ax.set_ylim(p05 / 1.3, p95 * 1.3)
-    pu.format_log_axes(ax, which='y')
-
-    ax.legend(title=None, bbox_to_anchor=(0.5, 1.02), loc='lower center',
-              ncol=len(strat_order), fontsize=10, frameon=False)
-    ax.tick_params(axis='x', rotation=30)
-    ax.grid(True, axis='y', alpha=0.3)
+    ax.legend(title=None, bbox_to_anchor=(0.5, 1.03), loc='lower center',
+              ncol=min(len(strat_order), 7), fontsize=9.5, frameon=False)
 
     fig.tight_layout()
-
     for ext in ('pdf', 'png'):
         fig.savefig(agg_dir / f'aggregate_improvement_boxplot.{ext}',
-                    bbox_inches='tight', dpi=150)
+                    bbox_inches='tight', dpi=300)
     plt.close(fig)
-    print(f"  Saved aggregate_improvement_boxplot.pdf/png")
+    print("  Saved aggregate_improvement_boxplot.pdf/png (violin)")
 
 
 def generate_speedup_aggregate_boxplot(df, out_dir, args=None):
-    """Generate aggregated boxplot of kernel speedups by reordering algorithm.
-
-    Kernels on x-axis, reordering algorithms as hue.
-    One figure per n_cols value.
-    """
-    print("\n=== Aggregated Speedup Boxplot (by kernel) ===")
+    """Generate Tufte-styled log-space violin plot of kernel speedups by reordering algorithm."""
+    print("\n=== Aggregated Speedup Violin Plot (by kernel) ===")
 
     if 'speedup' not in df.columns:
-        print("  No speedup column — skipping aggregate speedup boxplot.")
+        print("  No speedup column — skipping aggregate speedup violin plot.")
         return
 
-    import seaborn as sns
-
-    # Exclude Original and cuSparse BSR (block-format outlier)
     df_reord = df[(df['strategy'] != 'Original')
                   & (df['kernel_id'] != 'CUSPARSE_SPMM_BSR_bs32')].copy()
 
-    # Strategy order
     strat_order = [get_perm_display(p) for p in PERMS if p != 'None']
     strat_order = [s for s in strat_order if s in df_reord['strategy'].unique()]
 
-    # Kernel order and display names
     kernels = sorted(df_reord['kernel_id'].unique())
     kernel_display = {k: KERNEL_NAMES.get(k, k) for k in kernels}
     kernel_names_ordered = [kernel_display[k] for k in kernels]
 
     agg_dir = out_dir / 'aggregate_speedup'
     agg_dir.mkdir(parents=True, exist_ok=True)
-    strat_palette = pu.get_strategy_palette()
-    # Remove Original from palette
-    strat_palette = {k: v for k, v in strat_palette.items() if k != 'Original'}
+    strat_palette = {k: v for k, v in pu.get_strategy_palette().items() if k != 'Original'}
 
     for nc in sorted(df_reord['n_cols'].unique()):
         df_nc = df_reord[df_reord['n_cols'] == nc].copy()
         df_nc['kernel_display'] = df_nc['kernel_id'].map(kernel_display)
-
         df_nc = df_nc.dropna(subset=['speedup'])
-        df_nc = df_nc[np.isfinite(df_nc['speedup'])]
+        df_nc = df_nc[np.isfinite(df_nc['speedup']) & (df_nc['speedup'] > 0)]
         if df_nc.empty:
             continue
 
-        n_kernels = len(kernel_names_ordered)
-        fig, ax = plt.subplots(figsize=(max(14, n_kernels * 2.0), 6))
+        df_nc['log_speedup'] = np.log10(df_nc['speedup'])
 
-        sns.boxplot(
-            data=df_nc, x='kernel_display', y='speedup', hue='strategy',
-            order=kernel_names_ordered, hue_order=strat_order,
-            palette=strat_palette,
-            ax=ax, fliersize=1.5, linewidth=0.8,
-            whis=(5, 95), showfliers=False,
-            medianprops=dict(color='red', linewidth=0.8),
+        n_kernels = len(kernel_names_ordered)
+        fig, ax = plt.subplots(figsize=(max(13, n_kernels * 1.9), 5.6))
+
+        _draw_tufte_violin(
+            ax, df_nc, x='kernel_display', y_log='log_speedup', hue='strategy',
+            order=kernel_names_ordered, hue_order=strat_order, palette=strat_palette,
         )
 
-        ax.axhline(y=1.0, color='black', linestyle='--', linewidth=0.8, alpha=0.6)
+        ax.axhline(y=0.0, color='#333333', linestyle='--', linewidth=0.8, alpha=0.65, zorder=2)
+
+        p02 = df_nc['log_speedup'].quantile(0.02)
+        p98 = df_nc['log_speedup'].quantile(0.98)
+        pad = max(0.08, (p98 - p02) * 0.08)
+        y_lo, y_hi = p02 - pad, p98 + pad
+        ax.set_ylim(y_lo, y_hi)
+        _format_log10_ratio_axis(ax, y_lo, y_hi)
+
         ax.set_xlabel('')
-        ax.set_ylabel('Speedup')
+        ax.set_ylabel('Speedup (log scale)', fontsize=10, labelpad=8)
+        ax.tick_params(axis='x', rotation=25)
+        plt.setp(ax.get_xticklabels(), ha='right')
+        apply_tufte_style(ax, grid_axis='y', offset_spines=False)
 
-        ax.set_yscale('log')
-        p05 = df_nc['speedup'].quantile(0.02)
-        p95 = df_nc['speedup'].quantile(0.98)
-        ax.set_ylim(p05 / 1.3, p95 * 1.3)
-        pu.format_log_axes(ax, which='y')
-
-        ax.legend(title=None, bbox_to_anchor=(0.5, 1.02), loc='lower center',
-                  ncol=len(strat_order), fontsize=10, frameon=False)
-        ax.tick_params(axis='x', rotation=30)
-        ax.grid(True, axis='y', alpha=0.3)
+        ax.legend(title=None, bbox_to_anchor=(0.5, 1.03), loc='lower center',
+                  ncol=min(len(strat_order), 7), fontsize=9.5, frameon=False)
 
         fig.tight_layout()
-
         for ext in ('pdf', 'png'):
             fig.savefig(agg_dir / f'aggregate_speedup_by_kernel_nc{int(nc)}.{ext}',
-                        bbox_inches='tight', dpi=150)
+                        bbox_inches='tight', dpi=300)
         plt.close(fig)
-        print(f"  Saved aggregate_speedup_by_kernel_nc{int(nc)}.pdf/png")
+        print(f"  Saved aggregate_speedup_by_kernel_nc{int(nc)}.pdf/png (violin)")
 
 
 def generate_speedup_profile_plots(df, out_dir, args=None):
-    """Generate Dolan-Moré performance-profile plots of kernel speedups.
-
-    For each kernel and n_cols, compute the performance ratio of each
-    strategy's speedup relative to the best strategy on each matrix:
-        r_{m,s} = speedup_{m,s} / max_{s'} speedup_{m,s'}   ∈ (0, 1]
-
-    Then plot the survival function P(ratio >= τ) vs τ.
-    Higher curve = better strategy.  Original (speedup=1) is included.
-
-    One grid figure per n_cols, with one subplot per kernel.
-    """
+    """Generate Tufte-styled Dolan-Moré performance-profile plots of kernel speedups."""
     if 'speedup' not in df.columns:
         print("  No speedup column — skipping speedup profile plots.")
         return
@@ -963,14 +971,12 @@ def generate_speedup_profile_plots(df, out_dir, args=None):
         ncols_grid = min(3, len(kernel_ids))
         nrows_grid = (len(kernel_ids) + ncols_grid - 1) // ncols_grid
         fig, axes = plt.subplots(nrows_grid, ncols_grid,
-                                 figsize=(5 * ncols_grid, 4 * nrows_grid),
+                                 figsize=(4.8 * ncols_grid, 3.6 * nrows_grid),
                                  squeeze=False)
 
         for idx, kid in enumerate(kernel_ids):
             ax = axes[idx // ncols_grid][idx % ncols_grid]
             df_k = df_nc[df_nc['kernel_id'] == kid].copy()
-
-            # Drop NaN / non-positive speedups
             df_k = df_k.dropna(subset=['speedup'])
             df_k = df_k[df_k['speedup'] > 0]
 
@@ -978,22 +984,9 @@ def generate_speedup_profile_plots(df, out_dir, args=None):
                 ax.set_visible(False)
                 continue
 
-            # Keep only matrices with all strategies present
-            all_strats = df_k['perm'].unique()
-            n_strats = len(all_strats)
-            strat_counts = df_k.groupby('matrix')['perm'].nunique()
-            complete = strat_counts[strat_counts == n_strats].index
-            df_k = df_k[df_k['matrix'].isin(complete)]
-
-            if df_k.empty:
-                ax.set_visible(False)
-                continue
-
-            # Compute ratio to best
             best = df_k.groupby('matrix')['speedup'].max().rename('best')
             df_k = df_k.merge(best, on='matrix')
             df_k['tau'] = df_k['speedup'] / df_k['best']
-
             n_matrices = df_k['matrix'].nunique()
 
             for perm in perm_order:
@@ -1002,23 +995,21 @@ def generate_speedup_profile_plots(df, out_dir, args=None):
                     continue
                 taus_asc = np.sort(sub['tau'].values)
                 pu.draw_profile_curve(ax, taus_asc, n_matrices, perm,
-                                    xlim_lo=-0.02, xlim_hi=1.05,
-                                    higher_is_better=True)
+                                      xlim_lo=-0.02, xlim_hi=1.05,
+                                      higher_is_better=True)
 
-            display_name = KERNEL_NAMES.get(kid, kid)
-            ax.set_title(display_name, fontsize=10)
-            ax.set_xlabel('Speedup relative to the best')
-            ax.set_ylabel('Fraction of matrices')
-            ax.set_ylim(0, 1.05)
+            ax.set_title(KERNEL_NAMES.get(kid, kid), fontsize=10, fontweight='semibold', pad=8)
+            ax.set_xlabel('Speedup relative to best', fontsize=9)
+            ax.set_ylabel('Fraction of matrices' if (idx % ncols_grid == 0) else '', fontsize=9)
+            ax.set_ylim(0, 1.03)
+            ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
             ax.set_xlim(-0.02, 1.05)
             ax.invert_xaxis()
-            ax.grid(True, alpha=0.3)
+            apply_tufte_style(ax, grid_axis='both', offset_spines=True)
 
-        # Hide unused axes
         for idx in range(len(kernel_ids), nrows_grid * ncols_grid):
             axes[idx // ncols_grid][idx % ncols_grid].set_visible(False)
 
-        # Shared legend — collect from all subplots to catch all strategies
         all_handles, all_labels = [], []
         seen = set()
         for ax_row in axes:
@@ -1028,35 +1019,29 @@ def generate_speedup_profile_plots(df, out_dir, args=None):
                         seen.add(l)
                         all_handles.append(h)
                         all_labels.append(l)
-        # Sort by canonical strategy order
+
         label_order = {s: i for i, s in enumerate(strategy_order)}
         pairs = sorted(zip(all_handles, all_labels),
                        key=lambda p: label_order.get(p[1], 999))
         if pairs:
             all_handles, all_labels = zip(*pairs)
-        fig.legend(all_handles, all_labels, loc='upper center',
-                   ncol=len(all_handles), fontsize=9,
-                   bbox_to_anchor=(0.5, 1.02))
 
-        fig.tight_layout()
+        fig.legend(all_handles, all_labels, loc='upper center',
+                   ncol=min(len(all_handles), 7), fontsize=9,
+                   frameon=False, bbox_to_anchor=(0.5, 1.03))
+
+        fig.tight_layout(h_pad=1.6, w_pad=1.4)
 
         for ext in ('pdf', 'png'):
             fig.savefig(prof_dir / f'speedup_profiles_nc{nc}.{ext}',
-                        bbox_inches='tight', dpi=150)
+                        bbox_inches='tight', dpi=300)
         plt.close(fig)
         print(f"  Saved speedup_profiles_nc{nc}.pdf/png")
 
 
 def generate_imp_correlation_plots(df, out_dir):
-    """Generate grouped bar charts of improvement-metric correlations.
-
-    Uses the correlation method from config (pearson/spearman/kendall).
-    Generates both linear and log-log variants.
-    One image per (scale, n_cols) combination.
-    x-axis: kernels, y-axis: correlation value, one bar per metric.
-    """
+    """Generate Tufte-styled grouped bar charts of improvement-metric correlations."""
     method = pu.get_correlation_method()
-    corr_display = pu.correlation_display_name()
     tag = _corr_method_tag()
 
     imp_metrics = _enabled_improvement_metrics()
@@ -1064,8 +1049,7 @@ def generate_imp_correlation_plots(df, out_dir):
     n_cols_values = sorted(df['n_cols'].unique())
 
     kernel_order = [KERNEL_NAMES[k] for k in kernels if k in KERNEL_NAMES]
-    metric_order = [get_metric_display(m) for m in imp_metrics]
-    n_metrics = len(metric_order)
+    n_metrics = len(imp_metrics)
     n_kernels = len(kernel_order)
 
     plot_dir = Path(out_dir) / 'imp_correlation'
@@ -1073,59 +1057,49 @@ def generate_imp_correlation_plots(df, out_dir):
 
     for log_transform in [False, True]:
         scale_suffix = '_loglog' if log_transform else ''
-        scale_label = ' (log-log)' if log_transform else ''
 
         for n_cols in n_cols_values:
             corr_df = compute_imp_correlations(
                 df, n_cols, imp_metrics, kernels,
                 method=method, log_transform=log_transform)
 
-            fig, ax = plt.subplots(figsize=(12, 6))
-
-            bar_width = 0.7 / n_metrics
+            fig, ax = plt.subplots(figsize=(11.5, 5.2))
+            bar_width = 0.72 / n_metrics
             x = np.arange(n_kernels)
 
             for mi, mc in enumerate(imp_metrics):
                 col = f'{mc}_corr'
-                display = get_metric_display(mc)
                 vals = []
                 for kernel in kernels:
                     row = corr_df[corr_df['kernel'] == kernel]
-                    if row.empty or pd.isna(row.iloc[0].get(col, np.nan)):
-                        vals.append(0)
-                    else:
-                        vals.append(row.iloc[0][col])
+                    val = np.nan if row.empty else row.iloc[0].get(col, np.nan)
+                    vals.append(0.0 if pd.isna(val) else val)
                 offset = (mi - (n_metrics - 1) / 2) * bar_width
-                ax.bar(x + offset, vals, bar_width * 0.9,
-                       label=display, color=get_metric_color(mc),
-                       edgecolor='black', linewidth=0.4)
+                ax.bar(x + offset, vals, bar_width * 0.92,
+                       label=get_metric_display(mc),
+                       color=get_metric_color(mc),
+                       edgecolor='white', linewidth=0.6)
 
-            ax.axhline(0, color='grey', linestyle='--', alpha=0.5,
-                       linewidth=0.8)
+            ax.axhline(0, color='#333333', linewidth=0.8, zorder=3)
             ax.set_xticks(x)
-            ax.set_xticklabels(kernel_order, rotation=30, ha='right')
+            ax.set_xticklabels(kernel_order, rotation=25, ha='right')
             ax.set_xlabel('')
-            ax.set_ylabel('Correlation with Speedup')
-            ax.legend(title='Metric', fontsize=10, title_fontsize=11)
-            ax.grid(True, axis='y', alpha=0.3)
+            ax.set_ylabel('Correlation with Speedup', fontsize=10, labelpad=8)
+            apply_tufte_style(ax, grid_axis='y', keep_left=False)
+            ax.legend(title=None, bbox_to_anchor=(0.5, 1.02), loc='lower center',
+                      ncol=min(n_metrics, 4), fontsize=9, frameon=False)
 
-            fname = (f'imp_correlation_bars_{tag}{scale_suffix}'
-                     f'_ncols_{int(n_cols)}.png')
+            fname = f'imp_correlation_bars_{tag}{scale_suffix}_ncols_{int(n_cols)}.png'
             out_path = plot_dir / fname
-            plt.tight_layout()
-            plt.savefig(out_path, dpi=300)
-            plt.close()
+            fig.tight_layout()
+            fig.savefig(out_path, dpi=300, bbox_inches='tight')
+            plt.close(fig)
             print(f"  Saved: {out_path}")
 
 
 def generate_imp_ncols_correlation_plots(df, out_dir):
-    """Generate per-metric bar charts showing how improvement–speedup correlation varies with n_cols.
-
-    One image per (metric, scale) combination.
-    x-axis: kernels, grouped bars: one per n_cols value, y-axis: correlation.
-    """
+    """Generate per-metric Tufte-styled bar charts across n_cols."""
     method = pu.get_correlation_method()
-    corr_display = pu.correlation_display_name()
     tag = _corr_method_tag()
 
     imp_metrics = _enabled_improvement_metrics()
@@ -1136,7 +1110,6 @@ def generate_imp_ncols_correlation_plots(df, out_dir):
     n_kernels = len(kernel_order)
     n_ncols = len(n_cols_values)
 
-    # Teal/green shades with distinct hatches
     _teal_shades = ['#b2dfdb', '#4db6ac', '#00897b', '#004d40']
     _hatches = ['', '///', '...', 'xxx', '\\\\\\', '+++']
     ncols_colors = dict(zip(n_cols_values, _teal_shades[:n_ncols]))
@@ -1147,23 +1120,20 @@ def generate_imp_ncols_correlation_plots(df, out_dir):
 
     for log_transform in [False, True]:
         scale_suffix = '_loglog' if log_transform else ''
-        scale_label = ' (log-log)' if log_transform else ''
-
-        # Pre-compute correlations for all n_cols values
-        corr_by_ncols = {}
-        for n_cols in n_cols_values:
-            corr_by_ncols[n_cols] = compute_imp_correlations(
+        corr_by_ncols = {
+            n_cols: compute_imp_correlations(
                 df, n_cols, imp_metrics, kernels,
                 method=method, log_transform=log_transform)
+            for n_cols in n_cols_values
+        }
 
         for mc in imp_metrics:
             col = f'{mc}_corr'
             metric_display = get_metric_display(mc)
             metric_safe = pu.safe_filename(mc)
 
-            fig, ax = plt.subplots(figsize=(12, 6))
-
-            bar_width = 0.7 / n_ncols
+            fig, ax = plt.subplots(figsize=(11.5, 5.2))
+            bar_width = 0.72 / n_ncols
             x = np.arange(n_kernels)
 
             for ni, n_cols in enumerate(n_cols_values):
@@ -1171,43 +1141,36 @@ def generate_imp_ncols_correlation_plots(df, out_dir):
                 vals = []
                 for kernel in kernels:
                     row = corr_df[corr_df['kernel'] == kernel]
-                    if row.empty or pd.isna(row.iloc[0].get(col, np.nan)):
-                        vals.append(0)
-                    else:
-                        vals.append(row.iloc[0][col])
+                    val = np.nan if row.empty else row.iloc[0].get(col, np.nan)
+                    vals.append(0.0 if pd.isna(val) else val)
                 offset = (ni - (n_ncols - 1) / 2) * bar_width
-                ax.bar(x + offset, vals, bar_width * 0.9,
-                       label=f'n_cols={int(n_cols)}',
+                ax.bar(x + offset, vals, bar_width * 0.92,
+                       label=f'$n_{{cols}}={int(n_cols)}$',
                        color=ncols_colors[n_cols],
                        hatch=ncols_hatches[n_cols],
-                       edgecolor='black', linewidth=0.4)
+                       edgecolor='#333333' if ncols_hatches[n_cols] else 'white',
+                       linewidth=0.45)
 
-            ax.axhline(0, color='grey', linestyle='--', alpha=0.5,
-                       linewidth=0.8)
+            ax.axhline(0, color='#333333', linewidth=0.8, zorder=3)
             ax.set_xticks(x)
-            ax.set_xticklabels(kernel_order, rotation=30, ha='right')
+            ax.set_xticklabels(kernel_order, rotation=25, ha='right')
             ax.set_xlabel('')
-            ax.set_ylabel(f'Correlation of {metric_display} with Speedup')
-            ax.legend(title='$n_{cols}$', fontsize=10, title_fontsize=11)
-            ax.grid(True, axis='y', alpha=0.3)
+            ax.set_ylabel(f'Correlation of {metric_display} with Speedup', fontsize=10, labelpad=8)
+            apply_tufte_style(ax, grid_axis='y', keep_left=False)
+            ax.legend(title=None, bbox_to_anchor=(0.5, 1.02), loc='lower center',
+                      ncol=n_ncols, fontsize=9.5, frameon=False)
 
-            fname = (f'imp_ncols_bars_{tag}{scale_suffix}_{metric_safe}.png')
+            fname = f'imp_ncols_bars_{tag}{scale_suffix}_{metric_safe}.png'
             out_path = plot_dir / fname
-            plt.tight_layout()
-            plt.savefig(out_path, dpi=300)
-            plt.close()
+            fig.tight_layout()
+            fig.savefig(out_path, dpi=300, bbox_inches='tight')
+            plt.close(fig)
             print(f"  Saved: {out_path}")
 
 
 def generate_imp_blocksize_correlation_plots(df, out_dir):
-    """Generate per-kernel bar charts showing density-improvement–speedup correlation across block sizes.
-
-    One image per (kernel, scale) combination.
-    x-axis: block sizes, y-axis: correlation value.
-    Mirrors the LaTeX tables from generate_imp_blocksize_tables in correlation_table.py.
-    """
+    """Generate Tufte-styled bar charts of density-improvement–speedup correlation across block sizes."""
     method = pu.get_correlation_method()
-    corr_display = pu.correlation_display_name()
     tag = _corr_method_tag()
 
     bd_imp_metrics = _density_improvement_metrics()
@@ -1224,16 +1187,14 @@ def generate_imp_blocksize_correlation_plots(df, out_dir):
 
     for log_transform in [False, True]:
         scale_suffix = '_loglog' if log_transform else ''
-        scale_label = ' (log-log)' if log_transform else ''
 
         for n_cols in n_cols_values:
             corr_df = compute_imp_correlations(
                 df, n_cols, bd_imp_metrics, kernels,
                 method=method, log_transform=log_transform)
 
-            fig, ax = plt.subplots(figsize=(12, 6))
-
-            bar_width = 0.7 / n_block_sizes
+            fig, ax = plt.subplots(figsize=(11.5, 5.2))
+            bar_width = 0.72 / n_block_sizes
             x = np.arange(n_kernels)
 
             for bi, (metric, label) in enumerate(zip(bd_imp_metrics, block_labels)):
@@ -1241,41 +1202,33 @@ def generate_imp_blocksize_correlation_plots(df, out_dir):
                 vals = []
                 for kernel in kernels:
                     row = corr_df[corr_df['kernel'] == kernel]
-                    if row.empty or pd.isna(row.iloc[0].get(col, np.nan)):
-                        vals.append(0)
-                    else:
-                        vals.append(row.iloc[0][col])
+                    val = np.nan if row.empty else row.iloc[0].get(col, np.nan)
+                    vals.append(0.0 if pd.isna(val) else val)
                 offset = (bi - (n_block_sizes - 1) / 2) * bar_width
-                ax.bar(x + offset, vals, bar_width * 0.9,
+                ax.bar(x + offset, vals, bar_width * 0.92,
                        label=f'{label}×{label}',
                        color=get_metric_color(metric),
-                       edgecolor='black', linewidth=0.4)
+                       edgecolor='white', linewidth=0.6)
 
-            ax.axhline(0, color='grey', linestyle='--', alpha=0.5,
-                       linewidth=0.8)
+            ax.axhline(0, color='#333333', linewidth=0.8, zorder=3)
             ax.set_xticks(x)
-            ax.set_xticklabels(kernel_order, rotation=30, ha='right')
+            ax.set_xticklabels(kernel_order, rotation=25, ha='right')
             ax.set_xlabel('')
-            ax.set_ylabel('Correlation of Block Density Improvement with Speedup')
-            ax.legend(title='Block Size', fontsize=10, title_fontsize=11)
-            ax.grid(True, axis='y', alpha=0.3)
+            ax.set_ylabel('Correlation of Block Density Improvement with Speedup', fontsize=10, labelpad=8)
+            apply_tufte_style(ax, grid_axis='y', keep_left=False)
+            ax.legend(title='Block size', bbox_to_anchor=(0.5, 1.02), loc='lower center',
+                      ncol=n_block_sizes, fontsize=9, title_fontsize=9.5, frameon=False)
 
-            fname = (f'imp_blocksize_bars_{tag}{scale_suffix}'
-                     f'_ncols_{int(n_cols)}.png')
+            fname = f'imp_blocksize_bars_{tag}{scale_suffix}_ncols_{int(n_cols)}.png'
             out_path = plot_dir / fname
-            plt.tight_layout()
-            plt.savefig(out_path, dpi=300)
-            plt.close()
+            fig.tight_layout()
+            fig.savefig(out_path, dpi=300, bbox_inches='tight')
+            plt.close(fig)
             print(f"  Saved: {out_path}")
 
 
 def generate_partial_correlation_heatmaps(df, out_dir):
-    """Generate partial-correlation heatmaps: one per (kernel, n_cols).
-
-    Each heatmap is a metric×metric matrix where cell [i,j] shows
-    r(speedup, metric_i | metric_j).  Diagonal = marginal correlation.
-    Reveals which metrics are redundant vs. independently predictive.
-    """
+    """Generate clean, minimal partial-correlation heatmaps: one per (kernel, n_cols)."""
     import seaborn as sns
     method = pu.get_correlation_method()
     corr_display = pu.correlation_display_name()
@@ -1290,109 +1243,77 @@ def generate_partial_correlation_heatmaps(df, out_dir):
         for suffix in [' Improvement', ' Reduction']:
             s = s.replace(suffix, '')
         return s
-    display_labels = [_clean_label(m) for m in imp_metrics]
 
+    display_labels = [_clean_label(m) for m in imp_metrics]
     plot_dir = Path(out_dir) / 'partial_correlation'
     plot_dir.mkdir(parents=True, exist_ok=True)
 
+    def _draw_heatmap(mat, title, cbar_label, out_path):
+        n = len(imp_metrics)
+        cell_size = max(0.85, min(1.15, 7.5 / n))
+        fig, ax = plt.subplots(figsize=(n * cell_size + 2.2, n * cell_size + 1.4))
+
+        hm = sns.heatmap(
+            mat.abs().astype(float), annot=True, fmt='.2f',
+            cmap='YlOrRd', vmin=0, vmax=0.7,
+            ax=ax, linewidths=1.0, linecolor='white', square=True,
+            cbar_kws={'label': cbar_label, 'shrink': 0.78, 'pad': 0.03},
+            annot_kws={'size': 8.5},
+        )
+        cbar = hm.collections[0].colorbar
+        if cbar is not None:
+            cbar.outline.set_visible(False)
+            cbar.ax.tick_params(length=0, labelsize=8.5)
+
+        ax.set_title(title, fontsize=11, pad=12, color='#111111')
+        ax.set_xlabel('Controlled metric', fontsize=9.5, labelpad=8)
+        ax.set_ylabel('Target metric', fontsize=9.5, labelpad=8)
+        ax.tick_params(length=0)
+        plt.setp(ax.get_xticklabels(), rotation=35, ha='right', fontsize=9)
+        plt.setp(ax.get_yticklabels(), rotation=0, fontsize=9)
+
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f"  Saved: {out_path}")
+
     for n_cols in n_cols_values:
         n_cols_int = int(n_cols)
+        all_mats = []
 
         for kernel in kernels:
             mat = pu.compute_partial_imp_matrix(
                 df, n_cols, imp_metrics, kernel, method=method)
-
             if mat.isna().all().all():
                 continue
+            all_mats.append(mat.copy())
 
-            # Relabel for display
             mat.index = display_labels
             mat.columns = display_labels
-
             kernel_display = KERNEL_NAMES.get(kernel, kernel)
-            n = len(imp_metrics)
-            cell_size = max(0.9, min(1.2, 8 / n))
-            figsize = (n * cell_size + 2.5, n * cell_size + 1.5)
-            fig, ax = plt.subplots(figsize=figsize)
-
-            sns.heatmap(
-                mat.abs().astype(float), annot=True, fmt='.2f',
-                cmap='YlOrRd', vmin=0, vmax=0.7,
-                ax=ax, linewidths=0.5, linecolor='white',
-                cbar_kws={'label': f'|Partial {corr_display}|',
-                          'shrink': 0.8},
-                annot_kws={'size': 9},
-            )
-
-            ax.set_title(
-                f'{kernel_display} — Partial Correlation with Speedup\n'
-                f'|r(speedup, row | col)|   n_cols={n_cols_int}',
-                fontsize=12, pad=12)
-            ax.set_xlabel('Controlled metric')
-            ax.set_ylabel('Target metric')
-            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-            ax.tick_params(axis='y', rotation=0)
-
             kernel_safe = pu.safe_filename(kernel)
-            fname = f'partial_corr_{tag}_{kernel_safe}_ncols_{n_cols_int}.png'
-            plt.tight_layout(rect=[0, 0, 1, 1])
-            plt.savefig(plot_dir / fname, dpi=300, bbox_inches='tight')
-            plt.close()
-            print(f"  Saved: {plot_dir / fname}")
-
-        # Also generate a summary heatmap: mean |partial r| across kernels
-        # to show which metrics are globally redundant
-        all_mats = []
-        for kernel in kernels:
-            mat = pu.compute_partial_imp_matrix(
-                df, n_cols, imp_metrics, kernel, method=method)
-            if not mat.isna().all().all():
-                all_mats.append(mat)
+            _draw_heatmap(
+                mat,
+                title=f'{kernel_display} — |r(speedup, row | col)|  (n_cols={n_cols_int})',
+                cbar_label=f'|Partial {corr_display}|',
+                out_path=plot_dir / f'partial_corr_{tag}_{kernel_safe}_ncols_{n_cols_int}.png',
+            )
 
         if len(all_mats) >= 2:
             mean_mat = pd.concat(all_mats).groupby(level=0).mean()
             mean_mat = mean_mat.reindex(index=imp_metrics, columns=imp_metrics)
             mean_mat.index = display_labels
             mean_mat.columns = display_labels
-
-            n = len(imp_metrics)
-            cell_size = max(0.9, min(1.2, 8 / n))
-            figsize = (n * cell_size + 2.5, n * cell_size + 1.5)
-            fig, ax = plt.subplots(figsize=figsize)
-
-            sns.heatmap(
-                mean_mat.abs().astype(float), annot=True, fmt='.2f',
-                cmap='YlOrRd', vmin=0, vmax=0.7,
-                ax=ax, linewidths=0.5, linecolor='white',
-                cbar_kws={'label': f'Mean |Partial {corr_display}|',
-                          'shrink': 0.8},
-                annot_kws={'size': 9},
+            _draw_heatmap(
+                mean_mat,
+                title=f'Mean Partial Correlation (all kernels) — |r(speedup, row | col)|  (n_cols={n_cols_int})',
+                cbar_label=f'Mean |Partial {corr_display}|',
+                out_path=plot_dir / f'partial_corr_{tag}_mean_ncols_{n_cols_int}.png',
             )
-
-            ax.set_title(
-                f'Mean Partial Correlation with Speedup (all kernels)\n'
-                f'|r(speedup, row | col)|   n_cols={n_cols_int}',
-                fontsize=12, pad=12)
-            ax.set_xlabel('Controlled metric')
-            ax.set_ylabel('Target metric')
-            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
-            ax.tick_params(axis='y', rotation=0)
-
-            fname = f'partial_corr_{tag}_mean_ncols_{n_cols_int}.png'
-            plt.tight_layout(rect=[0, 0, 1, 1])
-            plt.savefig(plot_dir / fname, dpi=300, bbox_inches='tight')
-            plt.close()
-            print(f"  Saved: {plot_dir / fname}")
 
 
 def generate_feature_importance_plots(df, out_dir):
-    """Random Forest feature importance: which structural improvement metrics
-    best predict speedup, per (kernel, n_cols).
-
-    Produces per n_cols:
-      feature_importance/rf_importance_heatmap_ncols_{N}.png  — metric × kernel heatmap
-      feature_importance/rf_importance_bars_ncols_{N}.png     — grouped bar chart
-    """
+    """Random Forest feature importance: clean heatmap + Tufte grouped bars."""
     from sklearn.ensemble import RandomForestRegressor
     import seaborn as sns
 
@@ -1401,7 +1322,6 @@ def generate_feature_importance_plots(df, out_dir):
     kernel_displays = [KERNEL_NAMES.get(k, k) for k in kernels]
     n_cols_values = sorted(df['n_cols'].unique())
     n_metrics = len(imp_metrics)
-    n_kernels = len(kernel_displays)
 
     def _clean(m):
         s = get_metric_display(m)
@@ -1414,7 +1334,6 @@ def generate_feature_importance_plots(df, out_dir):
 
     plot_dir = Path(out_dir) / 'feature_importance'
     plot_dir.mkdir(parents=True, exist_ok=True)
-
     MIN_SAMPLES = 30
 
     def _fit_rf(sub, n_trees=300):
@@ -1428,8 +1347,7 @@ def generate_feature_importance_plots(df, out_dir):
     for n_cols in n_cols_values:
         nc_int = int(n_cols)
         df_nc = df[df['n_cols'] == n_cols]
-        imp_mat = pd.DataFrame(np.nan, index=display_labels,
-                               columns=kernel_displays)
+        imp_mat = pd.DataFrame(np.nan, index=display_labels, columns=kernel_displays)
 
         for kernel, kdisp in zip(kernels, kernel_displays):
             sub = df_nc[(df_nc['kernel_id'] == kernel) &
@@ -1445,30 +1363,38 @@ def generate_feature_importance_plots(df, out_dir):
         if valid.empty:
             continue
 
-        # ---- Heatmap ------------------------------------------------- #
+        # ---- Heatmap ----
         fig, ax = plt.subplots(
-            figsize=(max(5, valid.shape[1] * 1.3 + 2),
-                     max(4, valid.shape[0] * 0.5 + 1.5)))
-        sns.heatmap(valid.astype(float), annot=True, fmt='.3f',
-                    cmap='Blues', vmin=0,
-                    ax=ax, linewidths=0.5, linecolor='white',
-                    cbar_kws={'label': 'Feature Importance', 'shrink': 0.8},
-                    annot_kws={'size': 8})
+            figsize=(max(5, valid.shape[1] * 1.25 + 2),
+                     max(4, valid.shape[0] * 0.55 + 1.5)))
+        hm = sns.heatmap(
+            valid.astype(float), annot=True, fmt='.3f',
+            cmap='Blues', vmin=0, ax=ax,
+            linewidths=1.0, linecolor='white',
+            cbar_kws={'label': 'Feature Importance', 'shrink': 0.8, 'pad': 0.03},
+            annot_kws={'size': 8.5},
+        )
+        cbar = hm.collections[0].colorbar
+        if cbar is not None:
+            cbar.outline.set_visible(False)
+            cbar.ax.tick_params(length=0, labelsize=8.5)
+
         ax.set_xlabel('')
         ax.set_ylabel('')
-        plt.setp(ax.get_xticklabels(), rotation=30, ha='right')
-        ax.tick_params(axis='y', rotation=0)
-        plt.tight_layout()
+        ax.tick_params(length=0)
+        plt.setp(ax.get_xticklabels(), rotation=25, ha='right', fontsize=9)
+        plt.setp(ax.get_yticklabels(), rotation=0, fontsize=9)
+        fig.tight_layout()
         fname = plot_dir / f'rf_importance_heatmap_ncols_{nc_int}.png'
-        plt.savefig(fname, dpi=300, bbox_inches='tight')
-        plt.close()
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
         print(f"  Saved: {fname}")
 
-        # ---- Grouped bar chart --------------------------------------- #
+        # ---- Grouped bar chart ----
         valid_kernels = list(valid.columns)
         n_valid = len(valid_kernels)
-        fig, ax = plt.subplots(figsize=(12, 6))
-        bar_width = 0.7 / n_metrics
+        fig, ax = plt.subplots(figsize=(11.5, 5.2))
+        bar_width = 0.72 / n_metrics
         x = np.arange(n_valid)
 
         for mi, (mc, dlabel, mdisplay) in enumerate(
@@ -1476,69 +1402,64 @@ def generate_feature_importance_plots(df, out_dir):
             vals = [valid.loc[dlabel, k] if dlabel in valid.index else 0.0
                     for k in valid_kernels]
             offset = (mi - (n_metrics - 1) / 2) * bar_width
-            ax.bar(x + offset, vals, bar_width * 0.9,
+            hatch = get_metric_hatch(mc)
+            ax.bar(x + offset, vals, bar_width * 0.92,
                    label=mdisplay, color=get_metric_color(mc),
-                   hatch=get_metric_hatch(mc),
-                   edgecolor='black', linewidth=0.4)
+                   hatch=hatch,
+                   edgecolor='#333333' if hatch else 'white',
+                   linewidth=0.45)
 
         ax.set_xticks(x)
-        ax.set_xticklabels(valid_kernels, rotation=30, ha='right')
+        ax.set_xticklabels(valid_kernels, rotation=25, ha='right')
         ax.set_xlabel('')
-        ax.set_ylabel('Feature Importance')
-        ax.legend(title='Metric', fontsize=10, title_fontsize=11)
-        ax.grid(True, axis='y', alpha=0.3)
-        plt.tight_layout()
+        ax.set_ylabel('Feature Importance', fontsize=10, labelpad=8)
+        apply_tufte_style(ax, grid_axis='y', keep_left=False)
+        ax.legend(title=None, bbox_to_anchor=(0.5, 1.02), loc='lower center',
+                  ncol=min(n_metrics, 4), fontsize=9, frameon=False)
+        fig.tight_layout()
         fname = plot_dir / f'rf_importance_bars_ncols_{nc_int}.png'
-        plt.savefig(fname, dpi=300, bbox_inches='tight')
-        plt.close()
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
         print(f"  Saved: {fname}")
 
 
-def _should_run(section: str, args) -> bool:
-    """Decide whether *section* should run given CLI flags.
+# ---------------------------------------------------------------------------
+# Entrypoint
+# ---------------------------------------------------------------------------
 
-    Priority: --sections (fine-grained) > --only-* (coarse) > default (all).
-    """
+def _should_run(section: str, args) -> bool:
     if args.sections is not None:
         return section in args.sections
-    # Legacy coarse flags
     kernel_sections = {'grouped-scatter', 'breakeven', 'speedup-profiles'}
     reorder_sections = {'reorder-analysis', 'profiles', 'pareto'}
     if args.only_kernels:
         return section in kernel_sections
     if args.only_reorder_analysis:
         return section in reorder_sections
-    return True  # no filter → run everything
+    return True
 
 
 def main():
     args = parse_args()
 
-    # Resolve perm_type pipeline
     perm_type_filter = 'ROW' if args.row else ('ASYMMETRIC' if args.asymmetric else 'SYMMETRIC')
     pipeline_key = ('random_' if args.random else '') + perm_type_filter.lower()
 
-    # Apply --random defaults (before any other processing)
     if args.out is None:
         data_label = 'random' if args.random else 'original'
         perm_label = perm_type_filter.lower()
         args.out = f"plots/{data_label}_{perm_label}"
 
-    # Validate mutually exclusive options (only matters for legacy flags)
     if args.sections is None and args.only_reorder_analysis and args.only_kernels:
         print("Error: --only-reorder-analysis and --only-kernels are mutually exclusive.")
         return
 
-    # Create output directory
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Set professional publication style
+
     pu.set_professional_style()
-    
-    # -----------------------------------------------------------------
-    # 1. Load & Filter Data (single pipeline from filter_config.yaml)
-    # -----------------------------------------------------------------
+    set_tufte_rcparams()
+
     cli_overrides = {
         'operations_csv': args.operations,
         'analysis_csv': args.analysis,
@@ -1548,7 +1469,6 @@ def main():
         'max_size': args.max_size,
         'random': args.random,
     }
-    # --include-rectangular means square_only=False
     if args.include_rectangular is not None:
         cli_overrides['square_only'] = not args.include_rectangular
 
@@ -1557,14 +1477,10 @@ def main():
         cli_overrides=cli_overrides,
     )
 
-    # Split by perm_type — downstream code works on a single homogeneous DF
     pipeline_cfg = _cfg.get('pipelines', {}).get(pipeline_key, {})
     df, df_analysis = pu.split_by_perm_type(
         df, df_analysis, perm_type_filter, pipeline_cfg)
 
-    # -----------------------------------------------------------------
-    # 2. Process Data (add all derived columns)
-    # -----------------------------------------------------------------
     has_ops = not df.empty
     if has_ops:
         print("\nProcessing data...")
@@ -1574,79 +1490,74 @@ def main():
     else:
         print("\nNo operations data — kernel/breakeven/original-scatter plots will be skipped.")
 
-    # Helper for reordering CSV path (shared by breakeven & timing)
     def _reordering_csv():
         return _cfg.get('data', {}).get('reordering_csv',
                                         'results/results_reordering.csv')
 
-    # -----------------------------------------------------------------
-    # 3. Generate Plots  (each guarded by _should_run)
-    # -----------------------------------------------------------------
-
     if has_ops and _should_run('grouped-scatter', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating grouped improvement vs speedup scatter plots...")
-        print("="*60)
+        print("=" * 60)
         generate_grouped_scatter_plots(df, out_dir, args)
 
     if has_ops and _should_run('breakeven', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating break-even analysis plots...")
-        print("="*60)
+        print("=" * 60)
         generate_breakeven_plots(df, out_dir, reordering_csv=_reordering_csv(),
                                  args=args)
 
     if _should_run('reorder-analysis', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating reordering analysis plots...")
-        print("="*60)
+        print("=" * 60)
         generate_reorder_analysis_plots(df_analysis, out_dir, n_jobs=args.jobs)
-        
+
     if _should_run('profiles', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating performance profile plots...")
-        print("="*60)
+        print("=" * 60)
         generate_profile_plots(df_analysis, out_dir)
 
     if _should_run('pareto', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating Pareto density-vs-time plots...")
-        print("="*60)
+        print("=" * 60)
         generate_pareto_plots(df_analysis, out_dir, reordering_csv=_reordering_csv(),
                               args=args)
 
     if _should_run('aggregate-improvement', args):
-        print("\n" + "="*60)
-        print("Generating aggregate improvement boxplot...")
-        print("="*60)
+        print("\n" + "=" * 60)
+        print("Generating aggregate improvement violin plots...")
+        print("=" * 60)
         generate_profile_aggregate_boxplot(df_analysis, out_dir)
         if has_ops:
             generate_speedup_aggregate_boxplot(df, out_dir, args)
 
     if has_ops and _should_run('speedup-profiles', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating speedup performance profile plots...")
-        print("="*60)
+        print("=" * 60)
         generate_speedup_profile_plots(df, out_dir, args)
 
     if has_ops and _should_run('imp-correlation', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating improvement-correlation bar charts...")
-        print("="*60)
+        print("=" * 60)
         generate_imp_correlation_plots(df, out_dir)
         generate_imp_ncols_correlation_plots(df, out_dir)
         generate_imp_blocksize_correlation_plots(df, out_dir)
 
     if has_ops and _should_run('partial-correlation', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating partial-correlation heatmaps...")
-        print("="*60)
+        print("=" * 60)
         generate_partial_correlation_heatmaps(df, out_dir)
 
     if has_ops and _should_run('feature-importance', args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Generating RF feature importance plots...")
-        print("="*60)
+        print("=" * 60)
         generate_feature_importance_plots(df, out_dir)
 
     print(f"\nAll plots saved to {out_dir}")
